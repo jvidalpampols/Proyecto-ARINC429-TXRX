@@ -25,7 +25,7 @@
 #include "Delay.h"
 
 void Draw_Get_A429_Label_Screen();
-int8_t Get_A429_Label();
+uint8_t Get_A429_Label();
 void Show_Label_Error();
 void Draw_Get_SDI_Screen();
 int Get_SDI();
@@ -33,14 +33,17 @@ void Show_SDI_Error();
 void Draw_Get_SSM_Screen();
 int Get_SSM();
 void Show_SSM_Error();
+void Show_Refresh_Time_Error();
 void Draw_Get_A429_Data_Screen();
 int32_t  Get_A429_Data();
 void Show_A429_Data_Error();
 int32_t ASCII_Hex_to_Int(char *hex);
+int8_t ASCII_Hex_to_Decimal(char *dec);
+//int8_t ASCII_Hex_to_Time(char *dec);
 int8_t ASCII_key_to_SSM(char key);
 int8_t ASCII_key_to_SDI(char key);
 int16_t ASCII_Hex_to_Oct(char *hex);
-int ASCII_Octal_to_Octal_Label(char *str);
+uint8_t ASCII_Octal_to_Octal_Label(char *str);
 
 //////////// GET ARINC 429 LABEL FUNCTIONS /////////////////////////////////
 void Draw_Get_A429_Label_Screen() {
@@ -55,74 +58,87 @@ void Draw_Get_A429_Label_Screen() {
   lcd.print("]: ");
 }
 
-int8_t Get_A429_Label() {
+uint8_t Get_A429_Label() {
   //String   keyBuffer[3];
   //String keyBuffer = "000";
   char key = 0;
-  char keyBuffer[] = "000";
-  int b_index = 0, fullBuff = 0, enter = 0;
-  int label;
+  char keyBuffer[] = "000"; // To store Label
+  int8_t b_index = 0;   //
+  int8_t fullBuff = 0;  // Use "false" instead
+  int8_t enter = 0; // Use "false" instead
+  uint8_t label;
 
   Draw_Get_A429_Label_Screen();
   lcd.setCursor(9, 2);
   lcd.blink();
-
-  //key = waitForKey();
+  //TRUE
+  //key = wait for key();
   do {
-    while (!(key = I2C_Keypad.getKey())) { }
-    if (b_index == 3) {
-      fullBuff = 1;
+    while (!(key = I2C_Keypad.getKey()))
+    {
+      ;// Do nothing
+    }// End while no key
+
+    // We got a key
+    if (b_index == 3) { //keyBuffer FULL
+      fullBuff = 1; // Use "true" instead
+
       switch (key) {
-        case '#':
+
+        case '#': //Enter key
           if (ALT) {
             ALT = !ALT;
             //digitalWrite(ALT_KEY, LOW);
-            PORTH &= ~(1 << PH5);
+            PORTH &= ~(1 << PH5); // Turn OFF LED "ALT"
           }
-          enter = 1;
+          enter = 1; // Use "true" instead
           Serial.println(" Enter.");
-          break;
-        case '*':
+          break; // End Enter key '#'
+
+        case '*': // "ALT" key
           ALT = !ALT;
           if (ALT) {
             //digitalWrite(ALT_KEY, HIGH);
-            PORTH |= (1 << PH5);
+            PORTH |= (1 << PH5); // Turn LED "ALT" ON
           }
           else {
             //digitalWrite(ALT_KEY, LOW);
-            PORTH &= ~(1 << PH5);
+            PORTH &= ~(1 << PH5); // Turn LED "ALT" OFF
           }
           break;
+
         case 'A':
-          if (ALT) {
-            key = ' ';
-            b_index--;
-            keyBuffer[b_index] = key;
+          if (ALT) { //Delete last key
+            key = ' '; //Delete last key
+            b_index--; // keyBuffer pointer backwards
+            keyBuffer[b_index] = key; // Delete last key
             Serial.print(key);
-            lcd.setCursor(9 + b_index, 2);
-            lcd.print(key);
-            lcd.setCursor(9 + b_index, 2);
-          }
+            lcd.setCursor(9 + b_index, 2); //Set LCD cursor backwards
+            lcd.print(key);  // Print space on LCD
+            lcd.setCursor(9 + b_index, 2); //Set LCD cursor backwards for next key
+          } //End if(ALT)
           break;
         default:
           break;
       }
-    }
-    else {
+    } //if keyBuffer FULL
+
+    else { // If keyBuffer NOT FULL
       switch (key) {
-        case '*':
+
+        case '*':  // ALT key
           ALT = !ALT;
           if (ALT) {
             //digitalWrite(ALT_KEY, HIGH);
-            PORTH |= (1 << PH5);
+            PORTH |= (1 << PH5); // ALT LED ON
           }
           else {
             //digitalWrite(ALT_KEY, LOW);
-            PORTH &= ~(1 << PH5);
+            PORTH &= ~(1 << PH5);// ALT LED OFF
           }
           break;
 
-        case 'A':
+        case 'A': // Delete key if ALT
           if (ALT && (b_index > 0)) {
             key = ' ';
             b_index--;
@@ -131,17 +147,17 @@ int8_t Get_A429_Label() {
             lcd.setCursor(9 + b_index, 2);
             lcd.print(key);
             lcd.setCursor(9 + b_index, 2);
-          }
+          } //Delete key
           break;
 
-        case '#':
+        case '#': // Enter key.
           /* Modify to be able to introduce only one or two numbers */
-          if (b_index > 0){
+          if (b_index > 0) {
             int moves = 3 - b_index;
             char first = keyBuffer[0];
             char second = keyBuffer[1];
             keyBuffer[0] = '0';
-            for (int i=0; i<moves; i++){
+            for (int i = 0; i < moves; i++) {
               keyBuffer[1] = first;
               keyBuffer[2] = second;
               first = keyBuffer[0];
@@ -152,7 +168,7 @@ int8_t Get_A429_Label() {
               //digitalWrite(ALT_KEY, LOW);
               PORTH &= ~(1 << PH5);
             }
-            enter = 1;
+            enter = 1; //Use "true" instead
           }
           break;
 
@@ -175,26 +191,26 @@ int8_t Get_A429_Label() {
           b_index++;
           break;
       }
-    }
+    } //if keyBuffer not FULL
   } while (enter == 0);
 
   //Serial.print('\n');
-  Serial.print("Octal Label in Buffer: ");
+  Serial.print("\n Octal Label in Buffer: ");
   Serial.println(keyBuffer);
 
   //Convert octal string label to octal label.
   label = ASCII_Octal_to_Octal_Label(keyBuffer);
   Serial.print("Label in OCT: ");
   Serial.println(label, OCT);
-  if (label == -1) {
+  if (label == 0) {
     Show_Label_Error();
     lcd.noBlink();
     Serial.print("Error. ");
     Serial.println(label);
     return -1;
   }
-  
- // if ((label > 0377) || (label < 0000)) {
+
+  // if ((label > 0377) || (label < 0000)) {
   if (label > 0377) {
     Show_Label_Error();
     lcd.noBlink();
@@ -488,14 +504,14 @@ int32_t  Get_A429_Data()
 
         case '#':
           /* Modify to be able to introduce only one, two or three numbers */
-          if (b_index > 0){
+          if (b_index > 0) {
             int moves = 5 - b_index;
             char first = keyBuffer[0];
             char second = keyBuffer[1];
             char third = keyBuffer[2];
             char fourth = keyBuffer[3];
             keyBuffer[0] = '0';
-            for (int i=0; i<moves; i++){
+            for (int i = 0; i < moves; i++) {
               keyBuffer[1] = first;
               keyBuffer[2] = second;
               keyBuffer[3] = third;
@@ -556,6 +572,231 @@ void Show_A429_Data_Error() {
   lcd.setCursor(1, 0);
   lcd.print("Error A429 Data value!!");
   delay(3000);
+}
+
+//////////// GET ARINC 429 Refresh Time FUNCTIONS /////////////////////////////////
+
+void Draw_Get_Refresh_Time_Screen()
+{
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("Enter Refresh Time");
+  lcd.setCursor(0, 1);
+  lcd.print("Values 50msec:1to99");
+  lcd.setCursor(0, 2);
+  lcd.print("Time[");
+  lcd.print(TX_Buffer_Index + 1);
+  lcd.print("]: ");
+}
+
+int8_t Get_Refresh_Time()
+{
+  char key;
+  char keyBuffer[] = "00"; // two chars. Set 1 as a default. Note: 1 >> 50msec Refresh time
+  int8_t b_index = 0; //Toget track buffer and cursor.
+  int8_t enter = 0; // Change to "true"
+  int8_t refresh_Time;
+  int8_t cursor_pos = 9;
+
+  Draw_Get_Refresh_Time_Screen();
+  lcd.setCursor(7, 2);
+  lcd.blink();
+
+  do {
+    while (!(key = I2C_Keypad.getKey()))
+    {
+      ;//While no key Do Nothing
+    }
+    if (b_index == 2) {//Buffer Full do not admit more digits
+
+      switch (key) {
+
+        case '#': // Enter key
+          if (ALT) {
+            ALT = !ALT;
+            //digitalWrite(ALT_KEY, LOW);
+            PORTH &= ~(1 << PH5); // Turn ALT LED OFF
+          }
+          enter = 1;  // Change to "true"
+          break;
+
+        case '*':
+          ALT = !ALT;
+          if (ALT) {
+            //digitalWrite(ALT_KEY, HIGH);
+            PORTH |= (1 << PH5); // Turn ALT LED ON
+          }
+          else {
+            //digitalWrite(ALT_KEY, LOW);
+            PORTH &= ~(1 << PH5); // Turn ALT LED OFF
+          }
+          break;
+
+        case 'A':  //Delete key
+          if (ALT) {
+            key = ' '; //Delete char
+            b_index--; // Buffer Pointer backwards
+            keyBuffer[b_index] = '0';
+            //Serial.print(key);
+            lcd.setCursor((cursor_pos + b_index), 2);
+            lcd.print(key);
+            //b_index ++;
+            lcd.setCursor((cursor_pos + b_index - 1), 2);
+          }
+          break;
+        default:
+          break;
+      }
+    } //if Buffer full
+
+    else { //If buffer is not full
+      switch (key) {
+
+        case '#': // Enter key
+          if (ALT) {
+            ALT = !ALT;
+            //digitalWrite(ALT_KEY, LOW);
+            PORTH &= ~(1 << PH5); // Turn ALT LED OFF
+          }
+          enter = 1;  // Change to "true"
+          break;
+
+        case '*':
+          ALT = !ALT;
+          if (ALT) {
+            //digitalWrite(ALT_KEY, HIGH);
+            PORTH |= (1 << PH5); //Turn ALT LED ON
+          }
+          else {
+            //digitalWrite(ALT_KEY, LOW);
+            PORTH &= ~(1 << PH5); //Turn ALT LED OFF
+          }
+          break;
+
+        case 'A': // Delete Char
+          if (ALT && (b_index > 0)) {
+            key = ' '; // Delete char
+            b_index--; // Pointer backwards
+            keyBuffer[b_index] = key; // Delete
+            Serial.print(key);
+            lcd.setCursor(cursor_pos + b_index, 2);
+            lcd.print(key);
+            //b_index++;
+            lcd.setCursor((cursor_pos + b_index - 1), 2);
+          }
+          break;
+
+        case '0':
+          keyBuffer[b_index] = key;
+          Serial.print(key);
+          lcd.setCursor((cursor_pos + b_index), 2);
+          lcd.print(key);
+          b_index++;
+          break;
+
+        case '1':
+          keyBuffer[b_index] = key;
+          Serial.print(key);
+          lcd.setCursor((cursor_pos + b_index), 2);
+          lcd.print(key);
+          b_index++;
+          break;
+
+        case '2':
+          keyBuffer[b_index] = key;
+          Serial.print(key);
+          lcd.setCursor((cursor_pos + b_index), 2);
+          lcd.print(key);
+          b_index++;
+          break;
+
+        case '3':
+          keyBuffer[b_index] = key;
+          Serial.print(key);
+          lcd.setCursor((cursor_pos + b_index), 2);
+          lcd.print(key);
+          b_index++;
+          break;
+
+        case '4':
+          keyBuffer[b_index] = key;
+          Serial.print(key);
+          lcd.setCursor((cursor_pos + b_index), 2);
+          lcd.print(key);
+          b_index++;
+          break;
+
+        case '5':
+          keyBuffer[b_index] = key;
+          Serial.print(key);
+          lcd.setCursor((cursor_pos + b_index), 2);
+          lcd.print(key);
+          b_index++;
+          break;
+
+        case '6':
+          keyBuffer[b_index] = key;
+          Serial.print(key);
+          lcd.setCursor((cursor_pos + b_index), 2);
+          lcd.print(key);
+          b_index++;
+          break;
+
+        case '7':
+          keyBuffer[b_index] = key;
+          Serial.print(key);
+          lcd.setCursor((cursor_pos + b_index), 2);
+          lcd.print(key);
+          b_index++;
+          break;
+
+        case '8':
+          keyBuffer[b_index] = key;
+          Serial.print(key);
+          lcd.setCursor((cursor_pos + b_index), 2);
+          lcd.print(key);
+          b_index++;
+          break;
+
+        case '9':
+          keyBuffer[b_index] = key;
+          Serial.print(key);
+          lcd.setCursor((cursor_pos + b_index), 2);
+          lcd.print(key);
+          b_index++;
+          break;
+
+        default:
+          break;
+      }
+    }
+  } while (enter == 0); // Use "true" or "false"
+
+ 
+  // To allow only one digit
+  char key_stored;
+  if (b_index == 1) {
+  key_stored = keyBuffer[0];
+  keyBuffer[0] = '0';
+  keyBuffer[1] = key_stored;
+    }
+  refresh_Time = ASCII_Hex_to_Decimal(keyBuffer);
+
+  lcd.noBlink();
+  //Check Label range
+  if (refresh_Time == -1) {
+    Show_Refresh_Time_Error();
+    return -1;
+  }
+  else
+    return (refresh_Time) ;
+}
+
+void Show_Refresh_Time_Error() {
+  lcd.clear();
+  lcd.setCursor(1, 0);
+  lcd.print("Error Refresh_Time value!!");
+  delay(2000);
 }
 
 //////////// GET ARINC 429 SSM FUNCTIONS /////////////////////////////////
@@ -698,7 +939,6 @@ void Show_SSM_Error() {
   delay(2000);
 }
 
-
 ///////////////  ASCII from keyboard input Turn into values  ////////////////
 /**
    hex2int
@@ -721,6 +961,39 @@ int32_t ASCII_Hex_to_Int(char *hex) {
     // shift 4 to make space for new digit, and add the 4 bits of the new digit
     val = (val << 4) | (byte & 0x0F);
   }
+  return val;
+}
+
+int8_t ASCII_Hex_to_Decimal(char *dec) { // Conversión for Refresh Time
+  int8_t val = 0;
+  int i = 0; //To be used as a factor
+  int8_t number = 0;
+
+  Serial.print("\nBefore ASCII CONVERTION:");
+  Serial.print(dec);
+
+  while (*dec) {
+    // get current character from the "hex string" and  then increment
+    char number = *dec++;
+    // transform hex character to the 4bit equivalent number, using the ascii table indexes.
+    // Only "0" >> "9" are expected
+    if (number >= '0' && number <= '9')
+      number = number - '0';
+    else
+      return -1; //Error!!!!
+
+    // Powers of 10 for each digit
+    for (int j = 0; j == i; j++) {
+      number = number * 10;
+    }
+    val = val + number;
+
+    i++; // Increase 10 factor for each digit
+
+  }//while (*dec)
+  Serial.print("\nAfter ASCII CONVERTION");
+  Serial.print("\nRefresh Time:");
+  Serial.println(val);
   return val;
 }
 
@@ -747,6 +1020,7 @@ int8_t ASCII_key_to_SDI(char key) {
   return val;
 }
 
+
 int16_t ASCII_Hex_to_Oct(char *hex) {
   int16_t val = 0;
   while (*hex) {
@@ -766,9 +1040,9 @@ int16_t ASCII_Hex_to_Oct(char *hex) {
    ASCII_Octal_to_Octal_Label
    take an octal string and convert it into an int number that is the label intered in Octal)
 */
-int ASCII_Octal_to_Octal_Label(char *str)
+uint8_t ASCII_Octal_to_Octal_Label(char *str)
 {
-  int label = 0;
+  uint8_t label = 0;
   char number;
 
   Serial.print("String to be converted: ");
@@ -785,12 +1059,12 @@ int ASCII_Octal_to_Octal_Label(char *str)
     // '0' <----> '7'
     if ((number >= '0') && (number <= '7'))
     {
-      number = number - '0';
+      number = number - '0';//convert from ASCII to decimal value
       //break;
       //continue;
     }
     else
-      return -1; // Error!!!!
+      return 0; // Error!!!!
 
     // shift 3 to make space for new digit, and add the 3 bits of the new octal digit
     label = (label << 3);
@@ -798,7 +1072,8 @@ int ASCII_Octal_to_Octal_Label(char *str)
     Serial.print("Octal: ");
     Serial.println(label, OCT);
     ct++;
-  }
+  }//while *str
+
   Serial.print("Converted: ");
   Serial.println(label);
   return label;

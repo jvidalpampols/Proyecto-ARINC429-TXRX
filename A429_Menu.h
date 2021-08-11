@@ -51,14 +51,19 @@ bool ALT = false;     //Variable Booleana para identificar si esta presoionada l
 const byte ROWS = 4;
 const byte COLS = 4;
 
-//Define Keypad Matrix
-/*char keys[ROWS][COLS] = {{'1', '4', '7', '*'},
+//Define Keypad Matrix Prototype
+/*
+char keys[ROWS][COLS] = 
+  {{'1', '4', '7', '*'},
   {'2', '5', '8', '0'},
   {'3', '6', '9', '#'},
   {'A', 'B', 'C', 'D'}
-};*/
+};
+*/
 
-char keys[ROWS][COLS] = {{'1', '2', '3', 'A'},
+//Define Keypad Matrix BreakOut Panel
+char keys[ROWS][COLS] = 
+  {{'1', '2', '3', 'A'},
   {'4', '5', '6', 'B'},
   {'7', '8', '9', 'C'},
   {'*', '0', '#', 'D'}
@@ -117,8 +122,8 @@ byte menuCursor[8] = {
 #define EVEN_PARITY 1
 
 uint8_t key;
-uint8_t keyBuffer[MaxKeys];
-uint8_t sdiBuffer[3];
+//uint8_t keyBuffer[MaxKeys];
+//uint8_t sdiBuffer[3];
 int8_t TX_Buffer_Index = 0;   // Index for lower display. Index should be signed otherwise instead of -1 it will be 255
 int8_t RX_Buffer_Index = 0;  // Index for lower display.Index should be signed otherwise instead of -1 it will be 255
 uint8_t TX_Speed = LOW_SPEED; //Default Value
@@ -179,13 +184,24 @@ void TX_Menu();
 void Draw_TX_Programming_Menu();
 void TX_Programming_Menu();
 void Draw_Programming_Label();
-int8_t Programming_Label();
+uint8_t Programming_Label();
 void Draw_Programming_SDI();
-int  Programming_SDI();
+int8_t  Programming_SDI();
 void Draw_Programming_Data();
 int32_t Programming_Data();
 void Draw_Programming_SSM();
-int Programming_SSM();
+int8_t Programming_SSM();
+
+///////Refresh Time
+//void Draw_Programming_A429_Refresh(void);
+int8_t Programming_A429_Refresh(void);
+void Draw_Get_Refresh_Time_Screen();
+int8_t Get_Refresh_Time(void);
+
+void Show_Refresh_Time_Error(void);
+
+/////////////////////////////
+
 void Draw_Misc();
 void Misc();
 void Draw_Test();

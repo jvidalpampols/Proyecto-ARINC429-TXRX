@@ -182,12 +182,12 @@ ARINC429 A429_RX_Buffer [Max_A429_RX_Buffer]; // To keep the ARINC 429 words rec
 
 unsigned int A429_TX_Buffer_Write_Index = 0;
 unsigned int A429_TX_Buffer_Read_Index = 0;
-unsigned int A429_RX_Buffer_Write_Index = 0;
-unsigned int A429_RX_Buffer_Read_Index = 0;
-unsigned int A429_RX_Buffer_Arrange_Index = 0;
-unsigned int A429_RX_Display_Index = 0;
-uint8_t RX_Scroll_Index = 0;  //To be increased by Push Buttom so as to scroll RX display.Scroll Push buttom wil, trigger INT4 and increase RX_Scroll_Index
-uint8_t TX_Scroll_Index = 0;  //To be increased by Push Buttom so as to scroll TX display.Scroll Push buttom wil, trigger INT4 and increase TX_Scroll_Index
+unsigned int A429_RX_Buffer_Write_Index = 0;// Keep track of where to store next label
+//unsigned int A429_RX_Buffer_Read_Index = 0; // Not Used// Keep track of last label Read in order to show on LCD
+unsigned int A429_RX_Buffer_Arrange_Index = 0;// Keep track of labels already arranged
+//unsigned int A429_RX_Display_Index = 0;//Not used
+uint8_t RX_Scroll_Index = 0;  //To be increased by keys "1" FWD and "7" AFT and increase RX_Scroll_Index
+uint8_t TX_Scroll_Index = 0;  //To be increased by keys "1" FWD and "7" AFT and increase TX_Scroll_Index
 uint8_t Header_A429_HEX = false; // To print Header only first time.
 uint8_t Header_A429_BIN = false; // To print Header only first time.
 
@@ -208,12 +208,12 @@ void Print_Initial_Message() {
   lcd.home();
   lcd.setCursor(0, 0);
   lcd.print("-------CITHE--------");
-  delay(1000);
+  delay(500);
   lcd.setCursor(0, 1);
   lcd.print("ARINC 429 TX-RX");
-  delay(1000);
+  delay(500);
   lcd.setCursor(0, 3);
-  lcd.print("Version 1, Jan. 2021");
+  lcd.print("Version 2, Agos.2021");
   delay (3000);
 }
 
@@ -1205,7 +1205,7 @@ void Fill_Testing_TX_Array() {
   A429_TX_Buffer[6]. A429_SDI = B00000010; // SDI Binary.
   A429_TX_Buffer[6]. A429_Data = 0x3BCDE; // Data HEX coded.
   A429_TX_Buffer[6]. A429_SSM = B00000001; // SSM Binary.
-  A429_TX_Buffer[6]. refresh_50ms = 15; //750ms;
+  A429_TX_Buffer[6]. refresh_50ms = 19; //950ms;
 
   //Load TX Buffer with A429 ARRAY [7]
   A429_TX_Buffer[7]. A429_Label = 01; // Label Octal coded.
@@ -1263,7 +1263,7 @@ void Load_DEI_TX_Buffer() { // This function is called every 50msec. Checks refr
 
 
   //for (uint8_t i = 0; i <= 7 ; i++) {
-  for (uint8_t i = 0; i <= 1 ; i++) { // For testing only one label at a time
+  for (uint8_t i = 0; i <= 0 ; i++) { // For testing only one label at a time
     if (A429_TX_Buffer[i].refresh_50ms == 0) {
       continue;
     }//if refresh time == 0 skip to next into buffer
@@ -1295,16 +1295,18 @@ void Get_RX1_Data() {
   // Gets data from RX_1 after DR1 interrupt.
   // Data should be stored into Data_Word_1 and Data_Word_1, fields of "A429 struct" array using the RX buffer global index
 
+  uint8_t Label = 0; //Coded in octal to check for label
   unsigned int Data_Word_1;
   unsigned int Data_Word_2;
 
+  // Reset DATA BUS as INPUT
   //Data_Bus_Input(); //Bus to Read
   PORTL = 0x00; //Inputs HI Z
   PORTC = 0x00;  //Inputs HI Z
   DDRL = 0x00; // PORT Input
   DDRC = 0x00;  // PORT Input
 
-  //////////////////////// WORD_1  ////////////////
+  //////////////////////// GET WORD_1  ////////////////
 
   cbi (PORTA, 0); //SEL WORD1 >> PA0 "LOW" /PA0 = LOW >> Set Word_1. Pin: DI22
   //Enable_RX_1();//OE1 LOW, DI23
@@ -1314,7 +1316,7 @@ void Get_RX1_Data() {
   //_NOP1();
   sbi (PORTA, 1); //OE1 HIGH, DI23//PA1 "HI" //PA1 = HIGH Disenables RX 1.Pin: DI23. OE1
 
-  //////////////////////// WORD_2  ////////////////
+  //////////////////////// GET WORD_2  ////////////////
   //Select_Word_2_Read(); //SEL HI WORD_2, DI22
   sbi (PORTA, 0); //SEL WORD2 >> PA0 "HI" // //PA0 = HIGH >> Set WORD_2.Pin: DI22
   //_delayNanoseconds (Toeoe); //Delay Toeoe 50nsec
@@ -1327,29 +1329,51 @@ void Get_RX1_Data() {
   Data_Word_2 = Read_Data_Word();  //Read WORD_2
   //Disable_RX_1();//OE1 HIGH, DI23
   sbi (PORTA, 1); //PA1 "HI" //PA1 = HIGH Disenables RX 1.Pin: DI23. OE1
+
+  // Reset DATA BUS as OUTPUT
   //Data_Bus_Output();//Bus to Write
   DDRL = 0xFF; // PORT Output
   DDRC = 0xFF; // PORT Output
 
-  //Check if already in the RX_Buffer.
+  /////////////////////////////////////////CHECKS//////////////////
+
+  //Check if all data Data_Word_1 and Data_Word_2 already in the RX_Buffer. Same Label, same Data
+
   for (uint8_t i = 0; i < Max_A429_RX_Buffer; i++) {
     if ((Data_Word_1 == A429_RX_Buffer [i].DEI1016_Word_1) && (Data_Word_2 == A429_RX_Buffer [i].DEI1016_Word_2)) {
       return;
     }
-  }
+  }//For
 
+
+  //Check if label already in the RX_Buffer. If so over write data.
+
+  //Get A429 Label
+  Label = Data_Word_1 & 0x00FF;
+
+  //Scroll A429_RX_Buffer for same label
+  for (uint8_t i = 0; i < Max_A429_RX_Buffer; i++) {
+    if (Label == A429_RX_Buffer [i].A429_Label) { //Over write A429
+      A429_RX_Buffer [i].DEI1016_Word_1 = Data_Word_1;
+      A429_RX_Buffer [i].DEI1016_Word_2 = Data_Word_2;
+      return;
+    }
+  }//For
+
+  //Check if Write_Index < Max_A429_RX_Buffer
   if (A429_RX_Buffer_Write_Index < Max_A429_RX_Buffer) {
     A429_RX_Buffer [A429_RX_Buffer_Write_Index].DEI1016_Word_1 = Data_Word_1;
     A429_RX_Buffer [A429_RX_Buffer_Write_Index].DEI1016_Word_2 = Data_Word_2;
   }
   else {
-    A429_RX_Buffer_Write_Index = 0;
+    A429_RX_Buffer_Write_Index = 0;//Reset Index to 0
     A429_RX_Buffer[A429_RX_Buffer_Write_Index].DEI1016_Word_1 = Data_Word_1;
     A429_RX_Buffer[A429_RX_Buffer_Write_Index].DEI1016_Word_2 = Data_Word_2;
     //Serial.println("Write Index to Reset");
   }
 
-  A429_RX_Buffer_Write_Index++;
+  A429_RX_Buffer_Write_Index++;//Increase Pointer
+
   //Check Buffer Limit
   if (A429_RX_Buffer_Write_Index >= Max_A429_RX_Buffer) {
     A429_RX_Buffer_Write_Index = 0;
@@ -1433,6 +1457,9 @@ void RX_Clear_Buffer() {
     A429_RX_Buffer[i].DEI1016_Word_2 = 0;
     A429_RX_Buffer[i].refresh_50ms = 0;
     A429_RX_Buffer[i].last_refresh_50ms = 0;
+    //New
+    A429_RX_Buffer_Write_Index = 0;// Keep track of where to store next label
+    A429_RX_Buffer_Arrange_Index = 0;// Keep track of labels already arranged
   }
 }// RX_Clear_Buffer()
 
@@ -1627,17 +1654,19 @@ void TX_SPEED_PARITY() {
           lcd.setCursor(5, 1);
           lcd.print("HIGH");
           //digitalWrite(TX_HIGH_LED, HIGH); //DI13 >> PB7
-          PORTB |= (1 << PB7);
+          PORTB |= (1 << PB7);//TX_HIGH_LED ON
           //digitalWrite(BD429_RELAY, LOW); // Relay BD429 OFF for TX HIGH. DI09 >> PH6
-          PORTH &= ~(1 << PH6);
+          PORTH &= ~(1 << PH6); // Relay OFF
+          //PORTH |= (1 << PH6); //Cambio Prueba Carlos 03-08-2021
         }
         else {
           lcd.setCursor(5, 1);
           lcd.print("LOW ");
           //digitalWrite(TX_HIGH_LED, LOW); //DI13 >> PB7
-          PORTB &= ~(1 << PB7);
+          PORTB &= ~(1 << PB7); //LED TX HI OFF
           //digitalWrite(BD429_RELAY, HIGH); // Relay BD429 ON for TX LOW. DI09 >> PH6
-          PORTH |= (1 << PH6);
+          PORTH |= (1 << PH6); //Relay ON
+          //PORTH &= ~(1 << PH6); //Relay OFF Cambio Prueba Carlos 03-08-2021
         }
         Serial.print("TX_Speed: ");
         Serial.println(TX_Speed);
@@ -1676,7 +1705,7 @@ void TX_SPEED_PARITY() {
         Draw_TX_SPEED_PARITY();
     }//Switch
   }  while ((key != '*') && (key != '4')); //Do until exit from TX_Menu to go back to Home_Menu
-  
+
   //Set Speed
   if (TX_Speed)
     Control_Word = (Control_Word & 0xDFFF); // TX_HI Bit 13 = '0'
@@ -1950,14 +1979,19 @@ void Draw_TX_Programming_Menu() {
   lcd.printstr("3>Data");
   lcd.setCursor(0, 2);
   lcd.printstr("4>SSM");
+
+  // Add Refresh Time
+  lcd.setCursor(8, 2);
+  lcd.printstr("5>Time");
+  //
   lcd.setCursor(0, 3);
   lcd.printstr("*>Back to TX Menu");
 }//Draw_TX_Programming_Menu
 
-int8_t Programming_Label() {
-  int8_t A429_Label = -1;
+uint8_t Programming_Label() {
+  uint8_t A429_Label = 0;
   Serial.println("Menu Programm Label");
-  while ( A429_Label == -1 ) {
+  while ( A429_Label == 0 ) {
     Draw_Get_A429_Label_Screen();
     A429_Label = Get_A429_Label();
     Serial.print("Get Label: ");
@@ -1969,8 +2003,25 @@ int8_t Programming_Label() {
   return A429_Label;
 } // Programming_Label()
 
-int  Programming_SDI() {
-  int SDI = -1; // Set SDI error to force while loop to Get_SDI()
+/*
+  uint8_t Programming_Label_Old() {
+  uint8_t A429_Label = -1;
+  Serial.println("Menu Programm Label");
+  while ( A429_Label == -1 ) {
+    Draw_Get_A429_Label_Screen();
+    A429_Label = Get_A429_Label();
+    Serial.print("Get Label: ");
+    Serial.print(A429_Label);
+    Serial.print(" ");
+    Serial.println(A429_Label, OCT);
+  }
+  State = State_Programming_TX; //Back to Programming TX
+  return A429_Label;
+  } // Programming_Label_old()
+*/
+
+int8_t  Programming_SDI() {
+  int8_t SDI = -1; // Set SDI error to force while loop to Get_SDI()
   Serial.println("Menu Programm SDI");
   while ( SDI == -1) {
     Draw_Get_SDI_Screen();
@@ -1991,10 +2042,11 @@ int32_t Programming_Data() {
   return A429_Data;
 } // Prorgamming_Data()
 
-int Programming_SSM() {
+//int Programming_SSM() {
+int8_t Programming_SSM() {
   //State = State_Programming_SSM;
   //Draw_Get_SSM_Screen();
-  int SSM = -1; // Set SSM error to force while loop to Get_SSM()
+  int8_t SSM = -1; // Set SSM error to force while loop to Get_SSM()
   Serial.println("Menu Programm SSM");
   while ( SSM == -1) {
     Draw_Get_SSM_Screen();
@@ -2004,12 +2056,29 @@ int Programming_SSM() {
   return SSM;
 } // Programming_SSM()
 
+///////////////////////////////  Refresh Time  ////////////////
+
+int8_t Programming_A429_Refresh() {
+  //State = State_Programming_SSM;
+  //Draw_Get_SSM_Screen();
+  int8_t Refresh_Time = -1; // Set SSM error to force while loop to Get_SSM()
+  Serial.println("Menu Programm Refresh_Time");
+  while (Refresh_Time == -1) {
+    Draw_Get_Refresh_Time_Screen();
+    Refresh_Time  = Get_Refresh_Time();
+  }
+  State = State_Programming_TX; //Back to Programming TX
+  return Refresh_Time;
+} // Programming_SSM()
+
+/////////////////////////////////
 void TX_Programming_Menu() {
   //Local A429 parameters.
   int8_t  A429_Label;
-  int A429_SDI;
-  int A429_SSM;
+  int8_t A429_SDI;
+  int8_t A429_SSM;
   int32_t A429_Data;
+  uint8_t A429_Time;
 
   Draw_TX_Programming_Menu();
   State = State_Programming_TX;
@@ -2026,7 +2095,7 @@ void TX_Programming_Menu() {
         A429_TX_Buffer[TX_Buffer_Index].A429_Label = A429_Label;
         Draw_TX_Programming_Menu(); // Redraw TX Programming Menu
         break;
-        /*Serial.println("Label");
+      /*Serial.println("Label");
         Serial.println("Step one.");
         int count = 0;
         Serial.print("Count: ");
@@ -2037,18 +2106,18 @@ void TX_Programming_Menu() {
         Serial.print(" ");
         Serial.println(A429_Label, OCT);
         if (A429_Label == -1){
-          Serial.println("Start label loop.");}
+        Serial.println("Start label loop.");}
         while (A429_Label == -1){
-          Show_Label_Error();
-          count++;
-          Serial.println(" ");
-          Serial.print("Count: ");
-          Serial.println(count);
-          A429_Label = Get_A429_Label();
-          Serial.print("Label: ");
-          Serial.print(A429_Label);
-          Serial.print(" ");
-          Serial.println(A429_Label, OCT);
+        Show_Label_Error();
+        count++;
+        Serial.println(" ");
+        Serial.print("Count: ");
+        Serial.println(count);
+        A429_Label = Get_A429_Label();
+        Serial.print("Label: ");
+        Serial.print(A429_Label);
+        Serial.print(" ");
+        Serial.println(A429_Label, OCT);
         }
         Serial.println("Finish.");
         Serial.println("Label OK");
@@ -2080,6 +2149,17 @@ void TX_Programming_Menu() {
         Draw_TX_Programming_Menu(); // Redraw TX Programming Menu
         break;
 
+      //////////// Refresh Time /////////////
+      case '5':
+        Serial.println("Refresh Time");
+        A429_Time = Programming_A429_Refresh();
+        // Store refresh_50ms
+        A429_TX_Buffer[TX_Buffer_Index].refresh_50ms = A429_Time;
+        Serial.print("Refresh Time Stored:");
+        Serial.println( A429_TX_Buffer[TX_Buffer_Index].refresh_50ms);
+        Draw_TX_Programming_Menu(); // Redraw TX Programming Menu
+        break;
+      //////////////////////////////////
       case '*':
         break;
 
