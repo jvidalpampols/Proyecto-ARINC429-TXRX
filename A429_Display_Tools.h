@@ -92,7 +92,7 @@ uint8_t Get_A429_Label() {
             PORTH &= ~(1 << PH5); // Turn OFF LED "ALT"
           }
           enter = 1; // Use "true" instead
-          Serial.println(" Enter.");
+          //Serial.println(" Enter.");
           break; // End Enter key '#'
 
         case '*': // "ALT" key
@@ -112,7 +112,7 @@ uint8_t Get_A429_Label() {
             key = ' '; //Delete last key
             b_index--; // keyBuffer pointer backwards
             keyBuffer[b_index] = key; // Delete last key
-            Serial.print(key);
+            //Serial.print(key);
             lcd.setCursor(9 + b_index, 2); //Set LCD cursor backwards
             lcd.print(key);  // Print space on LCD
             lcd.setCursor(9 + b_index, 2); //Set LCD cursor backwards for next key
@@ -143,7 +143,7 @@ uint8_t Get_A429_Label() {
             key = ' ';
             b_index--;
             keyBuffer[b_index] = key;
-            Serial.print(key);
+            //Serial.print(key);
             lcd.setCursor(9 + b_index, 2);
             lcd.print(key);
             lcd.setCursor(9 + b_index, 2);
@@ -185,7 +185,7 @@ uint8_t Get_A429_Label() {
 
         default:
           keyBuffer[b_index] = key;
-          Serial.print(key);
+          //Serial.print(key);
           lcd.setCursor(9 + b_index, 2);
           lcd.print(key);
           b_index++;
@@ -195,18 +195,18 @@ uint8_t Get_A429_Label() {
   } while (enter == 0);
 
   //Serial.print('\n');
-  Serial.print("\n Octal Label in Buffer: ");
-  Serial.println(keyBuffer);
+  //Serial.print("\n Octal Label in Buffer: ");
+  //Serial.println(keyBuffer);
 
   //Convert octal string label to octal label.
   label = ASCII_Octal_to_Octal_Label(keyBuffer);
-  Serial.print("Label in OCT: ");
-  Serial.println(label, OCT);
+  //Serial.print("Label in OCT: ");
+  //Serial.println(label, OCT);
   if (label == 0) {
     Show_Label_Error();
     lcd.noBlink();
-    Serial.print("Error. ");
-    Serial.println(label);
+    //Serial.print("Error. ");
+    //Serial.println(label);
     return -1;
   }
 
@@ -214,15 +214,15 @@ uint8_t Get_A429_Label() {
   if (label > 0377) {
     Show_Label_Error();
     lcd.noBlink();
-    Serial.print("Not in range. ");
-    Serial.println(label);
+    //Serial.print("Not in range. ");
+    //Serial.println(label);
     return (-1);
   }
   else {
-    Serial.print("Label in Decimal Converted in Octal: ");
-    Serial.print(label);
-    Serial.print("  ");
-    Serial.println(label, OCT);
+    //Serial.print("Label in Decimal Converted in Octal: ");
+    //Serial.print(label);
+    //Serial.print("  ");
+    //Serial.println(label, OCT);
     lcd.noBlink();
     return (label);
   }
@@ -232,7 +232,7 @@ void Show_Label_Error() {
   lcd.clear();
   lcd.setCursor(1, 0);
   lcd.print("Error Label value!!");
-  Serial.println("Show Error");
+  //Serial.println("Show Error");
   delay(2000);
 }
 
@@ -288,7 +288,7 @@ int Get_SDI()
             key = ' ';
             b_index--;
             keyBuffer = key;
-            Serial.print(key);
+            //Serial.print(key);
             lcd.setCursor(7, 2);
             lcd.print(key);
             lcd.setCursor(7, 2);
@@ -317,7 +317,7 @@ int Get_SDI()
             key = ' ';
             b_index--;
             keyBuffer = key;
-            Serial.print(key);
+            //Serial.print(key);
             lcd.setCursor(7, 2);
             lcd.print(key);
             lcd.setCursor(7, 2);
@@ -326,28 +326,28 @@ int Get_SDI()
 
         case '0':
           keyBuffer = key;
-          Serial.print(key);
+          //Serial.print(key);
           lcd.setCursor(7, 2);
           lcd.print(key);
           b_index++;
           break;
         case '1':
           keyBuffer = key;
-          Serial.print(key);
+          //Serial.print(key);
           lcd.setCursor(7, 2);
           lcd.print(key);
           b_index++;
           break;
         case '2':
           keyBuffer = key;
-          Serial.print(key);
+          //Serial.print(key);
           lcd.setCursor(7, 2);
           lcd.print(key);
           b_index++;
           break;
         case '3':
           keyBuffer = key;
-          Serial.print(key);
+          //Serial.print(key);
           lcd.setCursor(7, 2);
           lcd.print(key);
           b_index++;
@@ -361,8 +361,8 @@ int Get_SDI()
 
   SDI =  ASCII_key_to_SDI(keyBuffer);
 
-  Serial.print("SDI: ");
-  Serial.println(SDI);
+  //Serial.print("SDI: ");
+  //Serial.println(SDI);
   //Check Label range
   lcd.noBlink();
   if (SDI == -1) {
@@ -438,7 +438,7 @@ int32_t  Get_A429_Data()
             key = ' ';
             b_index--;
             keyBuffer[b_index] = key;
-            Serial.print(key);
+            //Serial.print(key);
             lcd.setCursor(8 + b_index, 3);
             lcd.print(key);
             lcd.setCursor(8 + b_index, 3);
@@ -467,14 +467,14 @@ int32_t  Get_A429_Data()
             key = ' ';
             b_index--;
             keyBuffer[b_index] = key;
-            Serial.print(key);
+            //Serial.print(key);
             lcd.setCursor(8 + b_index, 3);
             lcd.print(key);
             lcd.setCursor(8 + b_index, 3);
           }
           else {
             keyBuffer[b_index] = key;
-            Serial.print(key);
+            //Serial.print(key);
             lcd.setCursor(8 + b_index, 3);
             lcd.print(key);
             b_index++;
@@ -486,7 +486,7 @@ int32_t  Get_A429_Data()
             key = 'E';
           }
           keyBuffer[b_index] = key;
-          Serial.print(key);
+          //Serial.print(key);
           lcd.setCursor(8 + b_index, 3);
           lcd.print(key);
           b_index++;
@@ -496,7 +496,7 @@ int32_t  Get_A429_Data()
             key = 'F';
           }
           keyBuffer[b_index] = key;
-          Serial.print(key);
+          //Serial.print(key);
           lcd.setCursor(8 + b_index, 3);
           lcd.print(key);
           b_index++;
@@ -532,7 +532,7 @@ int32_t  Get_A429_Data()
 
         default:
           keyBuffer[b_index] = key;
-          Serial.print(key);
+          //Serial.print(key);
           lcd.setCursor(8 + b_index, 3);
           lcd.print(key);
           b_index++;
@@ -557,11 +557,11 @@ int32_t  Get_A429_Data()
   else {
     //delay(2000);
     //Test Data
-    Serial.println("");
-    Serial.print("Data: ");
-    Serial.println(data);
-    Serial.print("Data +1 = ");
-    Serial.println(data + 1, HEX);
+    //Serial.println("");
+    //Serial.print("Data: ");
+    //Serial.println(data);
+    //Serial.print("Data +1 = ");
+    //Serial.println(data + 1, HEX);
     lcd.noBlink();
     return (data) ;
   }
@@ -678,7 +678,7 @@ int8_t Get_Refresh_Time()
             key = ' '; // Delete char
             b_index--; // Pointer backwards
             keyBuffer[b_index] = key; // Delete
-            Serial.print(key);
+            //Serial.print(key);
             lcd.setCursor(cursor_pos + b_index, 2);
             lcd.print(key);
             //b_index++;
@@ -688,7 +688,7 @@ int8_t Get_Refresh_Time()
 
         case '0':
           keyBuffer[b_index] = key;
-          Serial.print(key);
+          //Serial.print(key);
           lcd.setCursor((cursor_pos + b_index), 2);
           lcd.print(key);
           b_index++;
@@ -696,7 +696,7 @@ int8_t Get_Refresh_Time()
 
         case '1':
           keyBuffer[b_index] = key;
-          Serial.print(key);
+          //Serial.print(key);
           lcd.setCursor((cursor_pos + b_index), 2);
           lcd.print(key);
           b_index++;
@@ -704,7 +704,7 @@ int8_t Get_Refresh_Time()
 
         case '2':
           keyBuffer[b_index] = key;
-          Serial.print(key);
+          //Serial.print(key);
           lcd.setCursor((cursor_pos + b_index), 2);
           lcd.print(key);
           b_index++;
@@ -712,7 +712,7 @@ int8_t Get_Refresh_Time()
 
         case '3':
           keyBuffer[b_index] = key;
-          Serial.print(key);
+          //Serial.print(key);
           lcd.setCursor((cursor_pos + b_index), 2);
           lcd.print(key);
           b_index++;
@@ -720,7 +720,7 @@ int8_t Get_Refresh_Time()
 
         case '4':
           keyBuffer[b_index] = key;
-          Serial.print(key);
+          //Serial.print(key);
           lcd.setCursor((cursor_pos + b_index), 2);
           lcd.print(key);
           b_index++;
@@ -728,7 +728,7 @@ int8_t Get_Refresh_Time()
 
         case '5':
           keyBuffer[b_index] = key;
-          Serial.print(key);
+          //Serial.print(key);
           lcd.setCursor((cursor_pos + b_index), 2);
           lcd.print(key);
           b_index++;
@@ -736,7 +736,7 @@ int8_t Get_Refresh_Time()
 
         case '6':
           keyBuffer[b_index] = key;
-          Serial.print(key);
+          //Serial.print(key);
           lcd.setCursor((cursor_pos + b_index), 2);
           lcd.print(key);
           b_index++;
@@ -744,7 +744,7 @@ int8_t Get_Refresh_Time()
 
         case '7':
           keyBuffer[b_index] = key;
-          Serial.print(key);
+          //Serial.print(key);
           lcd.setCursor((cursor_pos + b_index), 2);
           lcd.print(key);
           b_index++;
@@ -752,7 +752,7 @@ int8_t Get_Refresh_Time()
 
         case '8':
           keyBuffer[b_index] = key;
-          Serial.print(key);
+          //Serial.print(key);
           lcd.setCursor((cursor_pos + b_index), 2);
           lcd.print(key);
           b_index++;
@@ -760,7 +760,7 @@ int8_t Get_Refresh_Time()
 
         case '9':
           keyBuffer[b_index] = key;
-          Serial.print(key);
+          //Serial.print(key);
           lcd.setCursor((cursor_pos + b_index), 2);
           lcd.print(key);
           b_index++;
@@ -850,7 +850,7 @@ int Get_SSM()
             key = ' ';
             b_index--;
             keyBuffer = key;
-            Serial.print(key);
+            //Serial.print(key);
             lcd.setCursor(7, 2);
             lcd.print(key);
             lcd.setCursor(7, 2);
@@ -879,7 +879,7 @@ int Get_SSM()
             key = ' ';
             b_index--;
             keyBuffer = key;
-            Serial.print(key);
+            //Serial.print(key);
             lcd.setCursor(7, 2);
             lcd.print(key);
             lcd.setCursor(7, 2);
@@ -888,28 +888,28 @@ int Get_SSM()
 
         case '0':
           keyBuffer = key;
-          Serial.print(key);
+          //Serial.print(key);
           lcd.setCursor(7, 2);
           lcd.print(key);
           b_index++;
           break;
         case '1':
           keyBuffer = key;
-          Serial.print(key);
+          //Serial.print(key);
           lcd.setCursor(7, 2);
           lcd.print(key);
           b_index++;
           break;
         case '2':
           keyBuffer = key;
-          Serial.print(key);
+          //Serial.print(key);
           lcd.setCursor(7, 2);
           lcd.print(key);
           b_index++;
           break;
         case '3':
           keyBuffer = key;
-          Serial.print(key);
+          //Serial.print(key);
           lcd.setCursor(7, 2);
           lcd.print(key);
           b_index++;
@@ -969,8 +969,8 @@ int8_t ASCII_Hex_to_Decimal(char *dec) { // Conversión for Refresh Time
   int i = 0; //To be used as a factor
   int8_t number = 0;
 
-  Serial.print("\nBefore ASCII CONVERTION:");
-  Serial.print(dec);
+  //Serial.print("\nBefore ASCII CONVERTION:");
+  //Serial.print(dec);
 
   while (*dec) {
     // get current character from the "hex string" and  then increment
@@ -991,9 +991,9 @@ int8_t ASCII_Hex_to_Decimal(char *dec) { // Conversión for Refresh Time
     i++; // Increase 10 factor for each digit
 
   }//while (*dec)
-  Serial.print("\nAfter ASCII CONVERTION");
-  Serial.print("\nRefresh Time:");
-  Serial.println(val);
+  //Serial.print("\nAfter ASCII CONVERTION");
+  //Serial.print("\nRefresh Time:");
+  //Serial.println(val);
   return val;
 }
 
@@ -1045,14 +1045,14 @@ uint8_t ASCII_Octal_to_Octal_Label(char *str)
   uint8_t label = 0;
   char number;
 
-  Serial.print("String to be converted: ");
-  Serial.println(str);
+  //Serial.print("String to be converted: ");
+  //Serial.println(str);
   int ct = 0;
   while (*str) {
     // get current character from the "hex string" and  then increment
     number = *str++;
-    Serial.print("Label number pos: ");
-    Serial.println(ct);
+    //Serial.print("Label number pos: ");
+    //Serial.println(ct);
     // transform hex character to the 4bit equivalent number, using the ascii table indexes
 
     //Check for Errors:
@@ -1069,13 +1069,13 @@ uint8_t ASCII_Octal_to_Octal_Label(char *str)
     // shift 3 to make space for new digit, and add the 3 bits of the new octal digit
     label = (label << 3);
     label = label | (number & 0x07);
-    Serial.print("Octal: ");
-    Serial.println(label, OCT);
+    //Serial.print("Octal: ");
+    //Serial.println(label, OCT);
     ct++;
   }//while *str
 
-  Serial.print("Converted: ");
-  Serial.println(label);
+  //Serial.print("Converted: ");
+  //Serial.println(label);
   return label;
 }//ASCII_Octal_to_Octal_Label(char *str)
 
@@ -1087,8 +1087,8 @@ uint8_t ASCII_Octal_to_Octal_Label(char *str)
   Get_SDI() {
   while (!(key = I2C_Keypad.getKey())) {
   }
-  Serial.print("key: ");
-  Serial.println(key);
+  //Serial.print("key: ");
+  //Serial.println(key);
   lcd.print(key);
   }
 
@@ -1124,7 +1124,7 @@ uint8_t ASCII_Octal_to_Octal_Label(char *str)
     }//if ALT
 
     keyBuffer[i] = key;
-    Serial.print(key);
+    //Serial.print(key);
     lcd.setCursor(8 + i, 3);
     lcd.print(key);
     //Not useful, ALT_KEY pin is set LOW after one single key is pushed

@@ -141,9 +141,9 @@ Keypad_I2C I2C_Keypad( makeKeymap(keys), rowPins, colPins, ROWS, COLS, keypad_ad
 
 ///////////////////Functions //////////////////////////
 // Functions redefined To avoid compile warnings
-void Get_RX1_Data(); // To avoid compile warnings
-void Arrange_RX_Buffer();
-void RX_Clear_Buffer();
+//void Get_RX1_Data(); // To avoid compile warnings
+//void Arrange_RX_Buffer();
+//void RX_Clear_Buffer();
 void Load_Control_Word (unsigned int Ctrl_Word);
 static __inline__ void Delay_200nsec() __attribute__((always_inline));
 void RX_Display_A429_BIN();
