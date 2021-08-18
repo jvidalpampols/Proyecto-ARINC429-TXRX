@@ -32,11 +32,11 @@
 #define LCD_ROWS 4
 #define LCD_COLS 20
 
-/*enum {State_Home, State_TX_Menu_Home, State_TX_Display, State_RX_Menu_Home, State_Test, State_Misc, State_Help, State_TX_SPEED_PARITY_Programming, State_TX_Menu,
+/*enum {State_Home, State_TX_Menu_Home, State_TX_Display, State_RX_Menu_Home, State_Test, State_Software_Reset, State_Help, State_TX_SPEED_PARITY_Programming, State_TX_Menu,
       State_Programming_TX, State_Programming_Label, State_Programming_SDI, State_Programming_Data, State_Programming_SSM, State_TX_Display_HEX, State_TX_Display_BIN,
       State_TX_Display_ENG,  State_RX_Display, State_RX_SPEED_PARITY_Programming, State_RX_Display_HEX, State_RX_Display_BIN, State_RX_Display_ENG
      };*/
-enum {State_Home, State_TX_Display, State_Test, State_Misc, State_Help, State_TX_SPEED_PARITY_Programming, State_TX_Menu,
+enum {State_Home, State_TX_Display, State_Test, State_Software_Reset, State_Help, State_TX_SPEED_PARITY_Programming, State_TX_Menu,
       State_Programming_TX, State_Programming_Label, State_Programming_SDI, State_Programming_Data, State_Programming_SSM, State_TX_Display_HEX, State_TX_Display_BIN,
       State_TX_Display_ENG,  State_RX_Display, State_RX_SPEED_PARITY_Programming, State_RX_Display_HEX, State_RX_Display_BIN, State_RX_Display_ENG
      };
@@ -61,7 +61,9 @@ char keys[ROWS][COLS] =
 };
 */
 
-//Define Keypad Matrix BreakOut Panel
+//Define Keypad Matrix BreadOut Panel
+
+
 char keys[ROWS][COLS] = 
   {{'1', '2', '3', 'A'},
   {'4', '5', '6', 'B'},
@@ -202,8 +204,8 @@ void Show_Refresh_Time_Error(void);
 
 /////////////////////////////
 
-void Draw_Misc();
-void Misc();
+void Draw_Software_Reset();
+void Software_Reset();
 void Draw_Test();
 void Test();
 void Draw_Help();

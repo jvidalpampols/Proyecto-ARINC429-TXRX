@@ -56,9 +56,10 @@ void ISR_TX_Buffer_Empty();
 /////////////////////  ISR Interrupts Service Routines ///////////////////
 
 
-void ISR_Int_RX1() {
-  Int_RX1_Ready = true;
+void ISR_Int_RX1 () {
+  Int_RX1_Ready  = true;
   ISR_RX1_Times++; // Debugging Flag
+  ISR_RX1_Count ++; // Debugging  Flag
 }
 
 void ISR_Int_RX2() {
