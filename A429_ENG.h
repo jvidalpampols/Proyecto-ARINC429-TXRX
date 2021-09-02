@@ -35,21 +35,9 @@ float Label_211_TAT (uint32_t A429_data) {
   for (uint8_t i = 0; i <= 10; i++) {
     Power_2 = Power_2 * 2;
     Mask = Mask >> 1;
-    /*
-      Serial.print("i");
-      Serial.print(i);
-      Serial.print("   Mask: ");
-      Serial.println(Mask, BIN);
-    */
     if (My_data & Mask) {
       TAT = (TAT + (512 / Power_2));
     }
-    /*
-      Serial.print("My_data&Mask: ");
-      Serial.println(My_data & Mask);
-      Serial.print("TAT:");
-      Serial.println(TAT);
-    */
   }
 
   //Sign
@@ -81,15 +69,6 @@ float Label_001_Distance_To_Go (uint32_t A429_data) {
   //Serial.println(BCD_4, DEC);
   BCD_5 = A429_data & 0b0000000000000001111;
   //Serial.println(BCD_5, DEC);
-
-  /*
-    Serial.print(BCD_1);
-    Serial.print(BCD_2);
-    Serial.print(BCD_3);
-    Serial.print(BCD_4);
-    Serial.print(",");
-    Serial.print(BCD_5);
-  */
 
   My_Data = (float)(BCD_5) / 10; //Tof orce type convertion (BCD) to float
   My_Data = My_Data + BCD_4;

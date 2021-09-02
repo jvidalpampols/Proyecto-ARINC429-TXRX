@@ -8,15 +8,6 @@
 #include <util/delay.h>
 #include <avr/interrupt.h>
 
-/*/////////////////////////////// Changed files XXX.h names //////////////////////
-  #include "My_Interrupts.h"
-  #include "My_TX_Edit.h"
-  #include "My_Define.h"
-  #include "My_Pulses.h"
-  #include "My_Menu.h"
-  #include "Delay.h"
-  //////////////////////////////// Changed files XXX.h names /////////////////////*/
-
 #include "A429_Interrupts.h"
 #include "A429_Display_Tools.h"
 #include "A429_Define.h"
@@ -24,8 +15,11 @@
 #include "a429_Menu.h"
 #include "Delay.h"
 
+#define LABEL_ERROR 300// Use a value greater than 256
+
 void Draw_Get_A429_Label_Screen();
-uint8_t Get_A429_Label();
+//uint8_t Get_A429_Label();
+int16_t Get_A429_Label(); //To allow return -1 for errors
 void Show_Label_Error();
 void Draw_Get_SDI_Screen();
 int Get_SDI();
@@ -43,7 +37,8 @@ int8_t ASCII_Hex_to_Decimal(char *dec);
 int8_t ASCII_key_to_SSM(char key);
 int8_t ASCII_key_to_SDI(char key);
 int16_t ASCII_Hex_to_Oct(char *hex);
-uint8_t ASCII_Octal_to_Octal_Label(char *str);
+//uint8_t ASCII_Octal_to_Octal_Label(char *str);
+int16_t ASCII_Octal_to_Octal_Label(char *str); // To allow return -1 for errors
 
 //////////// GET ARINC 429 LABEL FUNCTIONS /////////////////////////////////
 void Draw_Get_A429_Label_Screen() {
@@ -58,7 +53,8 @@ void Draw_Get_A429_Label_Screen() {
   lcd.print("]: ");
 }
 
-uint8_t Get_A429_Label() {
+//uint8_t Get_A429_Label() {
+int16_t Get_A429_Label() { // To allow return -1 for errorrs
   //String   keyBuffer[3];
   //String keyBuffer = "000";
   char key = 0;
@@ -66,7 +62,7 @@ uint8_t Get_A429_Label() {
   int8_t b_index = 0;   //
   int8_t fullBuff = 0;  // Use "false" instead
   int8_t enter = 0; // Use "false" instead
-  uint8_t label;
+  uint8_t A429_Label;
 
   Draw_Get_A429_Label_Screen();
   lcd.setCursor(9, 2);
@@ -194,24 +190,19 @@ uint8_t Get_A429_Label() {
     } //if keyBuffer not FULL
   } while (enter == 0);
 
-  //Serial.print('\n');
-  //Serial.print("\n Octal Label in Buffer: ");
-  //Serial.println(keyBuffer);
-
   //Convert octal string label to octal label.
-  label = ASCII_Octal_to_Octal_Label(keyBuffer);
+  A429_Label = ASCII_Octal_to_Octal_Label(keyBuffer);
   //Serial.print("Label in OCT: ");
   //Serial.println(label, OCT);
-  if (label == 0) {
+  //if (A429_Label == 0000) {
+  if (A429_Label == -1) {
     Show_Label_Error();
     lcd.noBlink();
-    //Serial.print("Error. ");
-    //Serial.println(label);
     return -1;
   }
 
   // if ((label > 0377) || (label < 0000)) {
-  if (label > 0377) {
+  if (A429_Label > 0377) {
     Show_Label_Error();
     lcd.noBlink();
     //Serial.print("Not in range. ");
@@ -224,7 +215,7 @@ uint8_t Get_A429_Label() {
     //Serial.print("  ");
     //Serial.println(label, OCT);
     lcd.noBlink();
-    return (label);
+    return (A429_Label);
   }
 }
 
@@ -772,14 +763,14 @@ int8_t Get_Refresh_Time()
     }
   } while (enter == 0); // Use "true" or "false"
 
- 
+
   // To allow only one digit
   char key_stored;
   if (b_index == 1) {
-  key_stored = keyBuffer[0];
-  keyBuffer[0] = '0';
-  keyBuffer[1] = key_stored;
-    }
+    key_stored = keyBuffer[0];
+    keyBuffer[0] = '0';
+    keyBuffer[1] = key_stored;
+  }
   refresh_Time = ASCII_Hex_to_Decimal(keyBuffer);
 
   lcd.noBlink();
@@ -1040,96 +1031,49 @@ int16_t ASCII_Hex_to_Oct(char *hex) {
    ASCII_Octal_to_Octal_Label
    take an octal string and convert it into an int number that is the label intered in Octal)
 */
-uint8_t ASCII_Octal_to_Octal_Label(char *str)
+//uint8_t ASCII_Octal_to_Octal_Label(char *str)
+int16_t ASCII_Octal_to_Octal_Label(char *str) // To allow return -1 for errors
 {
-  uint8_t label = 0;
+  uint8_t A429_Label = 0;
   char number;
 
   //Serial.print("String to be converted: ");
   //Serial.println(str);
-  int ct = 0;
+  int str_pos = 0;
   while (*str) {
     // get current character from the "hex string" and  then increment
     number = *str++;
-    //Serial.print("Label number pos: ");
-    //Serial.println(ct);
-    // transform hex character to the 4bit equivalent number, using the ascii table indexes
+    Serial.print("Label number step: ");
+    Serial.println(str_pos);
 
-    //Check for Errors:
+    // transform hex character to the 4bit equivalent number, using the ascii table indexes
+    //Check for boundaries:
     // '0' <----> '7'
     if ((number >= '0') && (number <= '7'))
-    {
       number = number - '0';//convert from ASCII to decimal value
-      //break;
-      //continue;
-    }
     else
-      return 0; // Error!!!!
+      return -1; // Error!!!!
 
-    // shift 3 to make space for new digit, and add the 3 bits of the new octal digit
-    label = (label << 3);
-    label = label | (number & 0x07);
+    // shift 3 bits to make space for new digit, and add the 3 bits of the new octal digit
+    A429_Label = (A429_Label << 3); // That's the error checking four b7-b6-b5-b4  will be truncated to only 3 bits b6-b5-b4, so b7 disapperar al 3º shift
+    A429_Label = A429_Label | (number & 0x07);
     //Serial.print("Octal: ");
-    //Serial.println(label, OCT);
-    ct++;
+    //Serial.println(A429_Label, OCT);
+    str_pos++;
   }//while *str
 
-  //Serial.print("Converted: ");
-  //Serial.println(label);
-  return label;
+  // Not needed error checking see file >> A429_Label = (A429_Label << 3);
+  // That's the error checking four b7-b6-b5-b4  will be truncated to only 3 bits b6-b5-b4, so b7 disapperar al 3º shift
+  /*
+    if ( A429_Label > 0377) {
+    //Serial.println("Error ASCII to OCTAL");
+    return -1;
+    }
+    else {
+    Serial.print("Converted: ");
+    Serial.println(A429_Label, OCT);
+  */
+  return A429_Label;
 }//ASCII_Octal_to_Octal_Label(char *str)
 
 #endif
-
-
-/////////////////// OLD CODE /////////////////////////////
-/* UNUSED
-  Get_SDI() {
-  while (!(key = I2C_Keypad.getKey())) {
-  }
-  //Serial.print("key: ");
-  //Serial.println(key);
-  lcd.print(key);
-  }
-
-  Get_Data() {
-  for (int i = 0; i <= 4; i++) {
-    while (!(key = I2C_Keypad.getKey())) {
-    }
-    if (key == '*') {
-      i--; //Do not take into account
-      ALT = !ALT; //Change last state
-      if (ALT) {
-        digitalWrite(ALT_KEY, HIGH);
-        continue;
-      }
-      else {
-        digitalWrite(ALT_KEY, LOW);
-        continue;
-      }
-    }
-
-    if (ALT) {
-      switch (key) {
-        case ('C'):
-          key = 'E';
-          break;
-
-        case ('D'):
-          key = 'F';
-          break;
-        default:
-          ;
-      }//switch
-    }//if ALT
-
-    keyBuffer[i] = key;
-    //Serial.print(key);
-    lcd.setCursor(8 + i, 3);
-    lcd.print(key);
-    //Not useful, ALT_KEY pin is set LOW after one single key is pushed
-    //digitalWrite(ALT_KEY, LOW);
-  } //for(
-  }
-
-*/

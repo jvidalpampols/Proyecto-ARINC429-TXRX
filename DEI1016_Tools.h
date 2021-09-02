@@ -23,38 +23,6 @@
 //#include "My_Define.h"
 //#include "My_Pulses.h"
 //#include "My_Menu.h"
-///////////////////////////////// Changed files XXX.h names ////////////////////
-
-/*
-  These defines are the bit values that enable/disable settings of the
-  ARINC 429 UART.
-*/
-/* Define moved into "My_Define.h" file
-  #define PAREN     0x0010  // PARity ENable. CONTROL WORD_1
-  #define SLFTST    0x0000  // SeLF TeST. PARity ENable. CONTROL WORD_1
-  #define NOT_SLFTST 0x0020  // Not SeLF TeST. PARity ENable. CONTROL WORD_1
-  #define PAR_ODD   0x0000  // PARity ChecK. CONTROL WORD_2
-  #define PAR_EVEN  0x1000  // PARity ChecK. CONTROL WORD_2
-
-  #define TX_LO      0x2000  // TX (transmit). LOw speed (8-12,5 KHz). CONTROL WORD_2. 100usec Period
-  #define TX_HI      0x0000  // TX (transmit) HIgh speed (100 KHz). CONTROL WORD_2. 10usec Period
-  #define RX_LO      0x4000  // RX (receive)  LOw speed. CONTROL WORD_2
-  #define RX_HI      0x0000   // RX (receive)  HIgh speed. CONTROL WORD_2
-  #define WORD_32    0x0000   // 32 bits
-  #define WORD_25    0x8000   //25 bits
-  #define Max_A429_RX_Buffer 12    // Maximun Buffer RX. Should not be  > 64 because using "uint8_t" to scroll RX Buffer
-  #define Max_A429_TX_Buffer 8    // Maximun Buffer TX in DEI1016.
-*/
-
-//Sroll #define are not needed as far as I'm usuing keyboard instead the hardware inputs
-//#define scrollTX  5 //TX Scroll P/B input pullup.
-//#define scrollRX  4 //RX Scroll P/B input pullup.
-//#define scrollINT  19 // INT pin for Scroll input pullup
-//#define scrollTX  PE3 //TX Scroll P/B input pullup DI5
-//#define scrollRX  PG5 //RX Scroll P/B input pullup DI4
-//#define scrollINT  PD2 // INT pin for Scroll input pullup DI19
-
-#define timeWindow  100 // Time minimum window time to rid off bouncing
 
 // Now define several timer values for communicating with the DEI 1016:
 // These are in nano seconds.
@@ -90,7 +58,7 @@ unsigned int Control_Word_Default = 0x6010; //LO. D4=1 TX Parity Enable, D5 = 0 
 //D14 = 1 RX LO Rate 12,5 KHz, D15 = 0 Word Lenght = 32.
 
 /////////////////// From A429_Interrupts //////////////////////
-volatile byte Int_RX1_Ready = false; //Flag for INT_RX1. To be set 'true' for ISR and reset to 'false' when serviced into loop().
+volatile byte INT_RX1_Ready = false; //Flag for INT_RX1. To be set 'true' for ISR and reset to 'false' when serviced into loop().
 volatile byte Int_RX2_Ready = false; //Flag for INT_RX2. To be set 'true' for ISR and reset to 'false' when serviced into loop().
 volatile int TX_Buffer_Busy = false; // Flag to not allow further Load_TX_Buffer(); while is loading the TX_Buffer;
 volatile int RX1_Buffer_Busy = false; // Flag to not allow further RX_Buffer(); while is working in the RX1_Buffer;
@@ -98,16 +66,16 @@ volatile byte Flag_TX = false;
 volatile byte Flag_RX = false;
 volatile byte  TX_ON = false;  // On every 50msec.
 volatile int  Buffer_Flag_Interrupts = 0;
-volatile byte Int_DEI_TX_Buffer_Empty_Flag = false; //To Flag when TX Buffer is empty. This Flag in the loop(), will call to Load_DEI_TX_Buffer() if it notalready busy: "TX_Buffer_Busy"
+volatile byte INT_DEI_TX_Buffer_Empty_Flag = false; //To Flag when TX Buffer is empty. This Flag in the loop(), will call to Load_DEI_TX_Buffer() if it not already busy: "TX_Buffer_Busy"
 //To be set 'true' for ISR and reset to 'false' when serviced into loop().
 volatile unsigned int Times_TX_Buffer_Busy = 0; //Debug how many times ISR TX Buffer empty while TX_Buffer still loading
-volatile unsigned int ISR_RX1_Times = 0;   // Debug FLAG, how many times ISR RX1 is called.
+volatile unsigned int ISR_RX1_Times = 0;   // Flag for Auto Testing wrap around FLAG Testing the TX/RX. After 20 RX1 INT's Buffer_TX[0]is increased by 1.
 volatile unsigned int ISR_RX1_Count = 0;   // Debug FLAG, how many times ISR RX2 is called.
-volatile unsigned int ISR_RX2_Times = 0;   // Debug FLAG, how many times ISR RX2 is called.
+volatile unsigned int ISR_RX2_Times = 0;   // Flag for Auto Testing wrap around FLAG Testing the TX/RX. After 20 RX1 INT's Buffer_TX[0]is increased by 1.
 volatile unsigned int ISR_RX2_Count = 0;   // Debug FLAG, how many times ISR RX2 is called.
 
 
-uint8_t Menu_Test = false;// Flag to activate when Menu TEST is selected. TX_Buffer.data [0] will be incremented  every ISR_RX1_Times == 10
+uint8_t Menu_Test = false;// Flag to activate when Menu TEST is selected. TX_Buffer.data [0] will be incremented  every ISR_RX1_Times == 20
 
 
 //////////////////// Delays Functions ///////////////////
@@ -123,7 +91,7 @@ void Print_Initial_Message();
 void LCD_Clear_Line(uint8_t line);
 
 /////////////////  RX Functions ///////////////////////////
-void Display_RX_HEX_Header_Screen(); //Screen Fields layout for data.
+void Display_RX_HEX_Header_Screen(); //Screen Fields layout for data.Shows SDI, Refresh time instead of Tms
 void Display_RX_BIN_Header_Screen(); //Screen Fields layout for data.
 void Display_RX_ENG_Header_Screen(); //Screen Fields layout for data.
 
@@ -187,6 +155,7 @@ void Get_RX1_Data();
 void Get_RX2_Data();
 void Arrange_RX_Buffer();
 void RX_Clear_Buffer();
+void RX_Clear_Buffer_Position (uint8_t Buff_Index);
 
 //void Do_Reset();
 
@@ -228,8 +197,66 @@ uint8_t Header_A429_HEX = false; // To print Header only first time.
 uint8_t Header_A429_ENG = false; // To print Header only first time.
 uint8_t Header_A429_BIN = false; // To print Header only first time.
 
+//////////////////  HELP  ////////////////////////////
+int8_t Help_Index = 0; // Global pointer to keep track of Help strings.Note should be signed forboundaries checking
+const uint8_t Help_Index_Max = 35; // Global pointe r tokeep track of Help strings.
 
-//LiquidCrystal_I2C LCD(0x27, 20, 4); // set the LCD address to 0x27 for a 20 chars and 4 line display.
+char Help_Strings[36][20] = {
+  //1º Menu page
+  "HELP Keyboard   1/9",
+  "Scroll keys: 1 & 7 ",
+  "1>FWD, 7>AFT       ",
+  "*>Exit Key         ",
+
+  //2º Menu page
+  "HELP Keyboard   2/9",
+  "#>Enter key        ",
+  "*>ALT Key -> LED ON",
+  "ALT+C = E,ALT+D = F",
+
+  //3º Menu page
+  "HELP Home Menu  3/9",
+  "1>TX Menu:         ",
+  "Allows TX Label    ",
+  "Editing and Display",
+
+  //4º Menu page
+  "HELP Home Menu  4/9",
+  "4>TX Display:      ",
+  "Actual TX Buffer   ",
+  "Modes: HEX,BIN,ENG ",
+
+  //5º Menu page
+  "HELP Home Menu  5/9",
+  "7>RX Display:      ",
+  "Actual RX Buffer   ",
+  "Modes: HEX,BIN,ENG ",
+
+  //6º Menu page
+  "Display on ENG  6/9",
+  "Mode will show data",
+  "in ENG units or HEX",
+  "if Label not apply ",
+
+  //7º Menu page
+  "HELP Home Menu  7/9",
+  "2>TEST:     ",
+  "Wrap-Around Test   ",
+  "TX[0] increases +1 ",
+
+  //8º Menu page
+  "HELP Home Menu  8/9",
+  "Before select TEST ",
+  "Disconnect any  ",
+  "RX and TX hardware ",
+
+  //9º Menu page
+  "HELP Home Menu  9/9",
+  "5>RESET:           ",
+  "Software Reset     ",
+  "IC A429 DEI-1016   ",
+
+};
 
 /*
   void Do_Reset() {
@@ -255,9 +282,12 @@ void Print_Initial_Message() {
   lcd.setCursor(0, 1);
   lcd.print("ARINC 429 TX-RX");
   delay(500);
+  lcd.setCursor(0, 2);
+  lcd.print("Numero Serie:001");
+  delay(500);
   lcd.setCursor(0, 3);
-  lcd.print("Version 2, Agos.2021");
-  delay (3000);
+  lcd.print("SW Rev.0, 08/2021");
+  delay (5000);
 }
 
 //////LCD TX FUNCTIONS///////////////
@@ -291,8 +321,8 @@ void Display_TX_BIN_Header_Screen() {
   lcd.home();
   lcd.setCursor(0, 0);
   lcd.print("TX:");
-  lcd.setCursor(7, 0);
-  lcd.print("BINARY DATA");
+  lcd.setCursor(6, 0);
+  lcd.print("Tms:");
 
   lcd.setCursor(0, 1);
   lcd.print("LB:    SDI:   SSM:");
@@ -417,15 +447,30 @@ void TX_Display_A429_HEX()  {
   } while (key != '*');
 }//void TX_Display_A429_HEX()
 
+
 void TX_Display_A429_BIN_Show_Data() {
   uint8_t Data_MSB = 0;
 
   //TX BUFFER
   lcd.setCursor(3, 0);
-  lcd.print("  "); //Erase former TX
+  //lcd.print("  "); //Erase former TX
   lcd.setCursor(3, 0);
-  //lcd.setCursor(0, 1 + i);
   lcd.print(TX_Scroll_Index + 1);
+
+  //Serial.println("TX:  ");
+  //delay(3000);
+
+  //TX Tms (Refresh time)
+  lcd.setCursor(10, 0);
+  lcd.print("    "); //Erase former Tms
+  lcd.setCursor(10, 0);
+  lcd.print((A429_TX_Buffer[TX_Scroll_Index].TX_Refresh_50ms * 50));
+  //lcd.print((A429_TX_Buffer[TX_Scroll_Index].TX_Refresh_50ms));
+  //lcd.print("    "); //Erase former TX
+
+  //Serial.println("Tms:  ");
+  //delay(3000);
+
 
   //TX LABEL
   lcd.setCursor(3, 1);
@@ -447,6 +492,9 @@ void TX_Display_A429_BIN_Show_Data() {
     lcd.print(A429_TX_Buffer[TX_Scroll_Index].A429_Label, OCT);
   }
 
+  //Serial.println("TX LABEL:  ");
+  //delay(3000);
+
   //TX SDI
   lcd.setCursor(11, 1);
   lcd.print("   "); //Erase former SDI
@@ -462,6 +510,9 @@ void TX_Display_A429_BIN_Show_Data() {
     lcd.print(A429_TX_Buffer[TX_Scroll_Index].A429_SDI, BIN);
     lcd.print(" ");
   }
+
+  //Serial.println(" SDI:  ");
+  //delay(3000);
 
   //TX SSM
   lcd.setCursor(18, 1);
@@ -479,27 +530,177 @@ void TX_Display_A429_BIN_Show_Data() {
 
   //DATA BIN
   lcd.setCursor(0, 3);
-  //LCD_Clear_Line(3);
+  LCD_Clear_Line(3);
+
+  //////////////////New/////////////////
+  const uint32_t Data;
+
+  uint8_t Data_0;
+  uint16_t Data_1;
+  uint16_t Data_bit;
+  uint16_t Mask_Data = 0b0000000000000001;
+
+  Data_0 = A429_TX_Buffer[TX_Scroll_Index].A429_Data >> 16;
+  Data_1 = A429_TX_Buffer[TX_Scroll_Index].A429_Data & 0b0001111111111111111;
+
+
+  //Serial.print("Data_0: ");
+  int8_t cursor = 1;
+  for (int8_t i = 2; i >= 0; i--) {
+    Mask_Data = 0b0000000000000001;
+    Mask_Data = Mask_Data << i;
+    Data_bit = Data_0 & Mask_Data;
+    lcd.setCursor(cursor++, 3);
+    if (Data_bit)
+      lcd.print("1");
+    else
+      lcd.print("0");
+  } // for Data_0
+
+  //Serial.print("\nData_1: ");
+
+  for (int16_t i = 15; i >= 0; i--) {
+    Mask_Data = 0b0000000000000001;
+    Mask_Data = Mask_Data << i;
+    Data_bit = Data_1 & Mask_Data;
+    lcd.setCursor(cursor++, 3);
+    if (Data_bit)
+      lcd.print("1");
+    else
+      lcd.print("0");
+  } // for Data_1
+
+  /////////////////////////////////////
+
+
+}//void TX_Display_A429_BIN_Show_Data()
+
+void TX_Display_A429_BIN_Show_Data_Old() {
+  uint8_t Data_MSB = 0;
+
+  //TX BUFFER
+  lcd.setCursor(3, 0);
+  //lcd.print("  "); //Erase former TX
+  lcd.setCursor(3, 0);
+  lcd.print(TX_Scroll_Index + 1);
+
+  //Serial.println("TX:  ");
+  //delay(3000);
+
+  //TX Tms (Refresh time)
+  lcd.setCursor(10, 0);
+  lcd.print("    "); //Erase former Tms
+  lcd.setCursor(10, 0);
+  lcd.print((A429_TX_Buffer[TX_Scroll_Index].TX_Refresh_50ms * 50));
+  //lcd.print((A429_TX_Buffer[TX_Scroll_Index].TX_Refresh_50ms));
+  //lcd.print("    "); //Erase former TX
+
+  //Serial.println("Tms:  ");
+  //delay(3000);
+
+
+  //TX LABEL
+  lcd.setCursor(3, 1);
+  lcd.print("   "); //Erase former LABEL
+
+  lcd.setCursor(3, 1);
+  if (A429_TX_Buffer[TX_Scroll_Index].A429_Label > 0100) {
+    lcd.print(A429_TX_Buffer[TX_Scroll_Index].A429_Label, OCT);
+  }
+  else if ((A429_TX_Buffer[TX_Scroll_Index].A429_Label < 0100) && (A429_TX_Buffer[TX_Scroll_Index].A429_Label > 07)) {
+    lcd.setCursor(3, 1);
+    lcd.print ("0");
+    lcd.print(A429_TX_Buffer[TX_Scroll_Index].A429_Label, OCT);
+  }
+  else if (A429_TX_Buffer[TX_Scroll_Index].A429_Label < 010) {
+    lcd.setCursor(3, 1);
+    lcd.print ("0");
+    lcd.print ("0");
+    lcd.print(A429_TX_Buffer[TX_Scroll_Index].A429_Label, OCT);
+  }
+
+  //Serial.println("TX LABEL:  ");
+  //delay(3000);
+
+  //TX SDI
+  lcd.setCursor(11, 1);
+  lcd.print("   "); //Erase former SDI
+  if (A429_TX_Buffer[TX_Scroll_Index].A429_SDI < 2) {
+    lcd.setCursor(11, 1);
+    lcd.print("0");
+    lcd.print(A429_TX_Buffer[TX_Scroll_Index].A429_SDI, BIN);
+    lcd.setCursor(13, 1);
+    lcd.print(" ");
+  }
+  else {
+    lcd.setCursor(11, 1);
+    lcd.print(A429_TX_Buffer[TX_Scroll_Index].A429_SDI, BIN);
+    lcd.print(" ");
+  }
+
+  //Serial.println(" SDI:  ");
+  //delay(3000);
+
+  //TX SSM
+  lcd.setCursor(18, 1);
+  lcd.print("  "); //Erase former SSM
+
+  if (A429_TX_Buffer[TX_Scroll_Index].A429_SSM < 2) {
+    lcd.setCursor(18, 1);
+    lcd.print("0");
+    lcd.print(A429_TX_Buffer[TX_Scroll_Index].A429_SSM, BIN);
+  }
+  else {
+    lcd.setCursor(18, 1);
+    lcd.print(A429_TX_Buffer[TX_Scroll_Index].A429_SSM, BIN);
+  }
+
+  //DATA BIN
+  lcd.setCursor(0, 3);
+  LCD_Clear_Line(3);
+  uint32_t A429_Data_Mask = 0b0000000000000000000;
+
+  uint32_t A429_Data = A429_TX_Buffer[TX_Scroll_Index].A429_Data;
+  for (uint8_t i = 19; i >= 0; i--) {
+    lcd.setCursor(i, 3);
+    uint32_t A429_Data_Mask = 0b0000000000000000000;
+    A429_Data_Mask &= ~( 1 >> i);
+    if (A429_Data_Mask & A429_TX_Buffer[TX_Scroll_Index].A429_Data)
+      lcd.print("1");
+    else
+      lcd.print("0");
+  }
+
   lcd.setCursor(1, 3);
-  Data_MSB = A429_TX_Buffer[TX_Scroll_Index].A429_Data >> 16;
+  lcd.print("0000000000000000000"); // Set default pattern
   if (A429_TX_Buffer[TX_Scroll_Index].A429_Data == 0) {
-    lcd.print("0000000000000000000");
+    //lcd.print("0000000000000000000");
+    return;
   }
-  else if (Data_MSB >= 4) {
+
+  if (Data_MSB >= 4) {
     lcd.print(A429_TX_Buffer[TX_Scroll_Index].A429_Data, BIN);
   }
-  else if ((Data_MSB <= 3) && (Data_MSB >= 2)) {
+  else if ((Data_MSB <= 3) || (Data_MSB >= 2)) {
     lcd.setCursor(1, 3);
     lcd.print("0");
+    lcd.setCursor(2, 3);
     lcd.print(A429_TX_Buffer[TX_Scroll_Index].A429_Data, BIN);
   }
-  else if ((Data_MSB >= 0) && (Data_MSB <= 1)) {
+  else if ((Data_MSB <= 2) || (Data_MSB >= 1)) {
     lcd.setCursor(1, 3);
-    lcd.print("0");
-    lcd.print("0");
+    lcd.print("00");
     lcd.print(A429_TX_Buffer[RX_Scroll_Index].A429_Data, BIN);
   }
-}
+  else {
+    lcd.setCursor(1, 3);
+    lcd.print("000");
+    lcd.print(A429_TX_Buffer[RX_Scroll_Index].A429_Data, BIN);
+  }
+
+  //Serial.println("DATA:  ");
+  //delay(3000);
+} //void TX_Display_A429_BIN_Show_Data_Old()
 
 void TX_Display_A429_BIN() {//First time: Set up BIN header and  reset "RX_Scroll_Index"
   int key = 0;
@@ -557,13 +758,39 @@ void Display_RX_HEX_Header_Screen() {
   lcd.setCursor(3, 0);
   lcd.print("LAB");
   lcd.setCursor(7, 0);
+  lcd.print("SDI");
+  lcd.setCursor(11, 0);
   lcd.print("DATA");
-  lcd.setCursor(13, 0);
-  lcd.print("SSM");
   lcd.setCursor(17, 0);
-  lcd.print("Tms");
+  lcd.print("SSM");
+  delay (100);
+}//void Display_RX_HEX_Header_Screen_SDI()
+
+void Display_RX_BIN_Header_Screen() {
+  // Print menu RX to the LCD.
+
+  RX_Scroll_Index = 0; //Reset Scroll Index
+
+  lcd.clear();
+  lcd.home();
+  lcd.setCursor(0, 0);
+  lcd.print("RX:");
+  //lcd.setCursor(5, 0);
+  //lcd.print("BINARY");
+  lcd.setCursor(6, 0);
+  lcd.print("Tms:         ");
+
+  lcd.setCursor(0, 1);
+  lcd.print("LB:    SDI:   SSM:");
+
+  lcd.setCursor(0, 2);
+  lcd.print("B29");
+  lcd.print(" -----------> ");
+  //lcd.setCursor(11, 0);
+  lcd.print("B11");
   delay (1000);
-}//void Display_RX_HEX_Header_Screen()
+}//void Display_RX_BIN_Header_Screen()
+
 
 void Display_RX_ENG_Header_Screen() {
   // Print menu RX to the LCD.
@@ -585,31 +812,72 @@ void Display_RX_ENG_Header_Screen() {
   delay (1000);
 }//void Display_RX_ENG_Header_Screen()
 
-void Display_RX_BIN_Header_Screen() {
-  // Print menu RX to the LCD.
-
-  RX_Scroll_Index = 0; //Reset Scroll Index
-
-  lcd.clear();
-  lcd.home();
-  lcd.setCursor(0, 0);
-  lcd.print("RX:");
-  lcd.setCursor(7, 0);
-  lcd.print("BINARY DATA");
-
-  lcd.setCursor(0, 1);
-  lcd.print("LB:    SDI:   SSM:");
-
-  lcd.setCursor(0, 2);
-  lcd.print("B29");
-  lcd.print(" -----------> ");
-  //lcd.setCursor(11, 0);
-  lcd.print("B11");
-  delay (1000);
-}//void Display_RX_BIN_Header_Screen()
-
 
 void RX_Display_A429_HEX_Show_Data() {
+
+  for ( uint8_t i = 0; i <= 2; i++) {
+
+    //RX BUFFER
+    lcd.setCursor(0, 1 + i);
+    //lcd.print("                    ");  //Deleted to avoid flickering.
+    lcd.setCursor(0, 1 + i);
+    if ((RX_Scroll_Index + (i + 1)) < 10) {
+      lcd.print("0");
+    }
+    lcd.print(RX_Scroll_Index + (i + 1));
+
+    //LABEL
+    if (A429_RX_Buffer[RX_Scroll_Index + i].A429_Label > 0100) {
+      lcd.setCursor(3, 1 + i);
+      lcd.print(A429_RX_Buffer[RX_Scroll_Index + i].A429_Label, OCT);
+    }
+    else if ((A429_RX_Buffer[RX_Scroll_Index + i].A429_Label < 0100) && (A429_RX_Buffer[RX_Scroll_Index + i].A429_Label > 07)) {
+      lcd.setCursor(3, 1 + i);
+      lcd.print ("0");
+      lcd.print(A429_RX_Buffer[RX_Scroll_Index + i].A429_Label, OCT);
+    }
+    else if (A429_RX_Buffer[RX_Scroll_Index + i].A429_Label < 010) {
+      lcd.setCursor(3, 1 + i);
+      lcd.print ("0");
+      lcd.print ("0");
+      lcd.print(A429_RX_Buffer[RX_Scroll_Index + i].A429_Label, OCT);
+    }
+
+    //SDI
+    if (A429_RX_Buffer[RX_Scroll_Index + i].A429_SDI < 2) {
+      lcd.setCursor(7, 1 + i);
+      lcd.print("0");
+      lcd.print(A429_RX_Buffer[RX_Scroll_Index + i].A429_SDI, BIN);
+    }
+    else {
+      lcd.setCursor(7, 1 + i);
+      lcd.print(A429_RX_Buffer[RX_Scroll_Index + i].A429_SDI, BIN);
+    }
+
+    //DATA
+    lcd.setCursor(11, 1 + i);
+    if (A429_RX_Buffer[RX_Scroll_Index + i].A429_Data == 0)
+      lcd.print("00000");
+    else
+      lcd.print(A429_RX_Buffer[RX_Scroll_Index + i].A429_Data, HEX);
+
+    //SSM
+    if (A429_RX_Buffer[RX_Scroll_Index + i].A429_SSM < 2) {
+      lcd.setCursor(17, 1 + i);
+      lcd.print("0");
+      lcd.print(A429_RX_Buffer[RX_Scroll_Index + i].A429_SSM, BIN);
+    }
+    else {
+      lcd.setCursor(17, 1 + i);
+      lcd.print(A429_RX_Buffer[RX_Scroll_Index + i].A429_SSM, BIN);
+    }
+
+  } // for (uint8_t i = 0; i <= 2; i++)
+
+}//void RX_Display_A429_HEX_Show_Data()
+
+
+void RX_Display_A429_HEX_Show_Data_Old_Tms() {
 
   for ( uint8_t i = 0; i <= 2; i++) {
 
@@ -659,10 +927,10 @@ void RX_Display_A429_HEX_Show_Data() {
 
     //Tms
     //A429_RX_Buffer [RX_Scroll_Index + i].RX_Refresh_50ms
-    //uint16_t Tms = (A429_RX_Buffer [RX_Scroll_Index + i].RX_Refresh_50ms) * 50; // To get the refresh time in msec
-    uint8_t Tms = (A429_RX_Buffer [RX_Scroll_Index + i].RX_Refresh_50ms); // To get the refresh time in blocks of 50 msec
+    uint16_t Tms = (A429_RX_Buffer [RX_Scroll_Index + i].RX_Refresh_50ms) * 50; // To get the refresh time in msec
+    //uint8_t Tms = (A429_RX_Buffer [RX_Scroll_Index + i].RX_Refresh_50ms); // To get the refresh time in blocks of 50 msec
     lcd.setCursor(17, 1 + i);
-    if (A429_RX_Buffer[RX_Scroll_Index + i].A429_Label == 0000) {
+    if (A429_RX_Buffer[RX_Scroll_Index + i].A429_Label == 000) {
       lcd.print("000");
       continue;
     }
@@ -680,7 +948,7 @@ void RX_Display_A429_HEX_Show_Data() {
 
   } // for (uint8_t i = 0; i <= 2; i++)
 
-}//void RX_Display_A429_HEX_Show_Data()
+}//void RX_Display_A429_HEX_Show_Data_Old_Tms()
 
 void RX_Display_A429_ENG_Show_Data() {
 
@@ -728,7 +996,7 @@ void RX_Display_A429_ENG_Show_Data() {
       //DATA
       lcd.setCursor(7, 1 + i);
       if (A429_RX_Buffer[RX_Scroll_Index + i].A429_Data == 0)
-        lcd.print("         ");
+        lcd.print("            ");
       else {
         lcd.print(A429_RX_Buffer[RX_Scroll_Index + i].A429_Data, HEX);
         lcd.setCursor(12, 1 + i);
@@ -743,10 +1011,164 @@ void RX_Display_A429_BIN_Show_Data() {
   uint8_t Data_MSB = 0;
   //RX BUFFER
   lcd.setCursor(3, 0);
-  lcd.print("  "); //Deleted to avoid flickering. Erase former RX
+  //lcd.print("  "); //Deleted to avoid flickering. Erase former RX
   lcd.setCursor(3, 0);
   //lcd.setCursor(0, 1 + i);
   lcd.print(RX_Scroll_Index + 1);
+  if ((RX_Scroll_Index + 1) <= 9)
+    lcd.print(' ');
+
+
+  //Tms
+  //A429_RX_Buffer [RX_Scroll_Index + i].RX_Refresh_50ms
+  uint16_t Tms = (A429_RX_Buffer [RX_Scroll_Index].RX_Refresh_50ms) * 50; // To get the refresh time in msec
+  //uint8_t Tms = (A429_RX_Buffer [RX_Scroll_Index].RX_Refresh_50ms); // To get the refresh time in blocks of 50 msec
+  lcd.setCursor(10, 0);
+  if (A429_RX_Buffer[RX_Scroll_Index].A429_Label == 000) {
+    lcd.print("       ");
+    //continue;
+  }
+  else if ((Tms >= 100) && (Tms <= 9999) ) {
+    lcd.print(Tms);
+    lcd.print("    ");
+  }
+  else if ((Tms < 100) && (Tms >= 10)) {
+    lcd.print("0");
+    lcd.print(Tms);
+    lcd.print("    ");
+  }
+  else {
+    lcd.print(Tms);
+    lcd.print("    ");
+  }
+
+  //RX LABEL
+  lcd.setCursor(3, 1);
+  //lcd.print("   "); ////Deleted to avoid flickering.Erase former LABEL
+
+  lcd.setCursor(3, 1);
+  if (A429_RX_Buffer[RX_Scroll_Index].A429_Label > 0100) {
+    lcd.print(A429_RX_Buffer[RX_Scroll_Index].A429_Label, OCT);
+  }
+  else if ((A429_RX_Buffer[RX_Scroll_Index].A429_Label < 0100) && (A429_RX_Buffer[RX_Scroll_Index].A429_Label > 07)) {
+    lcd.setCursor(3, 1);
+    lcd.print ("0");
+    lcd.print(A429_RX_Buffer[RX_Scroll_Index].A429_Label, OCT);
+  }
+  else if (A429_RX_Buffer[RX_Scroll_Index].A429_Label < 010) {
+    lcd.setCursor(3, 1);
+    lcd.print ("0");
+    lcd.print ("0");
+    lcd.print(A429_RX_Buffer[RX_Scroll_Index].A429_Label, OCT);
+  }
+
+  //RX SDI
+  lcd.setCursor(11, 1);
+  //lcd.print("  "); //Deleted to avoid flickering.Erase former SDI
+  if (A429_RX_Buffer[RX_Scroll_Index].A429_SDI < 2) {
+    lcd.setCursor(11, 1);
+    lcd.print("0");
+    lcd.print(A429_RX_Buffer[RX_Scroll_Index].A429_SDI, BIN);
+  }
+  else {
+    lcd.setCursor(11, 1);
+    lcd.print(A429_RX_Buffer[RX_Scroll_Index].A429_SDI, BIN);
+  }
+
+  //RX SSM
+  lcd.setCursor(18, 1);
+  //lcd.print("  "); //Deleted to avoid flickering.Erase former SSM
+
+  if (A429_RX_Buffer[RX_Scroll_Index].A429_SSM < 2) {
+    lcd.setCursor(18, 1);
+    lcd.print("0");
+    lcd.print(A429_RX_Buffer[RX_Scroll_Index].A429_SSM, BIN);
+  }
+  else {
+    lcd.setCursor(18, 1);
+    lcd.print(A429_RX_Buffer[RX_Scroll_Index].A429_SSM, BIN);
+  }
+
+  //DATA BIN
+
+  //////////////////////////////New //////////////////////
+
+  //const uint32_t Data;
+
+  uint8_t Data_0;
+  uint16_t Data_1;
+  uint16_t Data_bit;
+  uint16_t Mask_Data = 0b0000000000000001;
+
+  Data_0 = A429_RX_Buffer[RX_Scroll_Index].A429_Data >> 16;
+  Data_1 = A429_RX_Buffer[RX_Scroll_Index].A429_Data & 0b0001111111111111111;
+
+
+  //Serial.print("Data_0: ");
+  int8_t cursor = 1;
+  for (int8_t i = 2; i >= 0; i--) {
+    Mask_Data = 0b0000000000000001;
+    Mask_Data = Mask_Data << i;
+    Data_bit = Data_0 & Mask_Data;
+    lcd.setCursor(cursor++, 3);
+    if (Data_bit)
+      lcd.print("1");
+    else
+      lcd.print("0");
+  } // for Data_0
+
+  //Serial.print("\nData_1: ");
+
+  for (int16_t i = 15; i >= 0; i--) {
+    Mask_Data = 0b0000000000000001;
+    Mask_Data = Mask_Data << i;
+    Data_bit = Data_1 & Mask_Data;
+    lcd.setCursor(cursor++, 3);
+    if (Data_bit)
+      lcd.print("1");
+    else
+      lcd.print("0");
+  } // for Data_1
+
+  /////////////////////////////////////
+
+}//void RX_Display_A429_BIN_Show_Data();
+
+
+void RX_Display_A429_BIN_Show_Data_Old() {
+  uint8_t Data_MSB = 0;
+  //RX BUFFER
+  lcd.setCursor(3, 0);
+  //lcd.print("  "); //Deleted to avoid flickering. Erase former RX
+  lcd.setCursor(3, 0);
+  //lcd.setCursor(0, 1 + i);
+  lcd.print(RX_Scroll_Index + 1);
+  if ((RX_Scroll_Index + 1) <= 9)
+    lcd.print(' ');
+
+
+  //Tms
+  //A429_RX_Buffer [RX_Scroll_Index + i].RX_Refresh_50ms
+  uint16_t Tms = (A429_RX_Buffer [RX_Scroll_Index].RX_Refresh_50ms) * 50; // To get the refresh time in msec
+  //uint8_t Tms = (A429_RX_Buffer [RX_Scroll_Index].RX_Refresh_50ms); // To get the refresh time in blocks of 50 msec
+  lcd.setCursor(10, 0);
+  if (A429_RX_Buffer[RX_Scroll_Index].A429_Label == 000) {
+    lcd.print("       ");
+    //continue;
+  }
+  else if ((Tms >= 100) && (Tms <= 9999) ) {
+    lcd.print(Tms);
+    lcd.print("    ");
+  }
+  else if ((Tms < 100) && (Tms >= 10)) {
+    lcd.print("0");
+    lcd.print(Tms);
+    lcd.print("    ");
+  }
+  else {
+    lcd.print(Tms);
+    lcd.print("    ");
+  }
 
   //RX LABEL
   lcd.setCursor(3, 1);
@@ -816,7 +1238,7 @@ void RX_Display_A429_BIN_Show_Data() {
     lcd.print(A429_RX_Buffer[RX_Scroll_Index].A429_Data, BIN);
   }
 
-}//void RX_Display_A429_BIN_Show_Data();
+}//void RX_Display_A429_BIN_Show_Data_Old();
 
 
 void RX_Display_A429_HEX() {
@@ -838,18 +1260,20 @@ void RX_Display_A429_HEX() {
 
     RX_Display_A429_HEX_Show_Data();
     /////////////////////////  RX PROCEDURES /////////////////////////
-    if (Int_RX1_Ready == true) { // RX1 Have received data
+    if (INT_RX1_Ready == true) { // RX1 Have received data
       RX1_Buffer_Busy = true;
       Get_RX1_Data();
-       
-       //////////// Debugging //////////////
+      INT_RX1_Ready = false;
+
+      //////////// Debugging //////////////
       ISR_RX1_Count--;
-      Serial.print("ISR_RX1_Count=");
-      Serial.print(ISR_RX1_Count);
+      //Serial.print("ISR_RX1_Count=");
+      //Serial.print(ISR_RX1_Count);
       /////////////////////////////////////
-      Int_RX1_Ready = false;
-      RX1_Buffer_Busy = false;
+      //INT_RX1_Ready = false;
+      //RX1_Buffer_Busy = false;
       Arrange_RX_Buffer();
+      RX1_Buffer_Busy = false;
       //RX_Display_A429_HEX_Show_Data(); // 23-JAN-2021 To avoid empty display until press '1' UP Buffer or '7' DOWN Buffer
 
     } //If INT_RX1 true
@@ -857,7 +1281,7 @@ void RX_Display_A429_HEX() {
     switch (key) //Check for Digital Input
     {
       case '1':
-        if ((RX_Scroll_Index < (Max_A429_RX_Buffer - 3)))  // Note: Max_A429_RX_Buffer 8 (0 >> 7)
+        if ((RX_Scroll_Index < (Max_A429_RX_Buffer - 3)))  // Note: Max_A429_RX_Buffer 20 (0+1 >> 19+1)
           RX_Scroll_Index += 3;
         else if ((RX_Scroll_Index == (Max_A429_RX_Buffer - 3)))
           RX_Scroll_Index = 0;
@@ -875,7 +1299,7 @@ void RX_Display_A429_HEX() {
       default:
         //Menu Test code
         if (Menu_Test == true) {
-          if (ISR_RX1_Times >= 10) {
+          if (ISR_RX1_Times >= 20) {
             ISR_RX1_Times = 0;
             A429_TX_Buffer[0]. A429_Data ++;
             if ( A429_TX_Buffer[0]. A429_Data >= 0x3FFFF) {
@@ -912,18 +1336,20 @@ void RX_Display_A429_ENG() {
     RX_Display_A429_ENG_Show_Data();
 
     /////////////////////////  RX PROCEDURES /////////////////////////
-    if (Int_RX1_Ready == true) { // RX1 Have received data
+    if (INT_RX1_Ready == true) { // RX1 Have received data
       RX1_Buffer_Busy = true;
       Get_RX1_Data();
-      
+      INT_RX1_Ready = false;
+
       //////////// Debugging //////////////
       ISR_RX1_Count--;
-      Serial.print("ISR_RX1_Count=");
-      Serial.print(ISR_RX1_Count);
+      //Serial.print("ISR_RX1_Count=");
+      //Serial.print(ISR_RX1_Count);
       /////////////////////////////////////
-      
-      RX1_Buffer_Busy = false;
+
       Arrange_RX_Buffer();
+      RX1_Buffer_Busy = false;
+
       //RX_Display_A429_ENG_Show_Data(); // 23-JAN-2021 To avoid empty display until press '1' UP Buffer or '7' DOWN Buffer
 
     } //If INT_RX1 true
@@ -949,7 +1375,7 @@ void RX_Display_A429_ENG() {
       default:
         //Menu Test code
         if (Menu_Test == true) {
-          if (ISR_RX1_Times >= 10) {
+          if (ISR_RX1_Times >= 20) {
             ISR_RX1_Times = 0;
             A429_TX_Buffer[0]. A429_Data ++;
             if ( A429_TX_Buffer[0]. A429_Data >= 0x3FFFF) {
@@ -980,19 +1406,20 @@ void RX_Display_A429_BIN() {//First time: Set up BIN header and  reset "RX_Scrol
 
   while ((key = I2C_Keypad.getKey()) != '*') {
     /////////////////////////  RX PROCEDURE /////////////////////////
-    if (Int_RX1_Ready == true) { // RX1 Have received data
+    if (INT_RX1_Ready == true) { // RX1 Have received data
       RX1_Buffer_Busy = true;
       Get_RX1_Data();
-      
+      INT_RX1_Ready = false;
+
       //////////// Debugging //////////////
       ISR_RX1_Count--;
-      Serial.print("ISR_RX1_Count=");
-      Serial.print(ISR_RX1_Count);
+      //Serial.print("ISR_RX1_Count=");
+      //Serial.print(ISR_RX1_Count);
       /////////////////////////////////////
-      
-      RX1_Buffer_Busy = false;
-    
+
       Arrange_RX_Buffer();
+      RX1_Buffer_Busy = false;
+
       //Setup_TX_Buffer();
       RX_Display_A429_BIN_Show_Data();
     } //If INT_RX1 true
@@ -1018,7 +1445,7 @@ void RX_Display_A429_BIN() {//First time: Set up BIN header and  reset "RX_Scrol
       default:
         //Menu Test code
         if (Menu_Test == true) {
-          if (ISR_RX1_Times >= 10) {
+          if (ISR_RX1_Times >= 20) {
             ISR_RX1_Times = 0;
             A429_TX_Buffer[0]. A429_Data ++;
             if ( A429_TX_Buffer[0]. A429_Data >= 0x3FFFF) {
@@ -1047,8 +1474,8 @@ void Init_Timers() {
   */
 
   //set pins as outputs
-  DDRB |= (1 << PB5);  //D11, PB5. Timer1A.1MHz DEI1016 Clock.
-  DDRB |= (1 << PB3); //D6, PH3. Timer4A. 20Hz Interrupt for labels refresh clock.
+  DDRB |= (1 << PB5);  //DI11, PB5. Timer1A.1MHz DEI1016 Clock.
+  DDRH |= (1 << PH3); //DI06, PH3. Timer4A. 20Hz Interrupt for labels refresh clock.
   //pinMode(12, OUTPUT); // Timer1B. Not used
   //pinMode(7, OUTPUT);  // Timer4B. Not used.
 
@@ -1083,7 +1510,7 @@ void Init_Timers() {
   TCCR4B |= (1 << CS41 ); // Clk/64. Set Prescaler to divide by 64. N = 64
   TCCR4B |= (1 << WGM42); // Mode4 CTC Clear on Time Compare
   TCCR4A |= (1 << COM4A0);  // Compare Output Mode for channel A Timer 4 (pin: 6) to Toggle when CTC
-  OCR4A = 12499; // = 0x30D3; Focr = Fclk/(2N(1+OCR1A)), N:64 Prescaler. >> OCR = (16.10e6 - (20x2x64))/(20x2x64) = 20 Hz ( Refresh 50 msec)
+  //OCR4A = 12499; // = 0x30D3; Focr = Fclk/(2N(1+OCR1A)), N:64 Prescaler. >> OCR = (16.10e6 - (20x2x64))/(20x2x64) = 20 Hz ( Refresh 50 msec)
   OCR4AH = 0x30;   //  First HI for Temporary Register.
   OCR4AL = 0xD3;   // Then LO
 
@@ -1097,10 +1524,10 @@ void Check_50msec_Timer() {//To test 50msec Timer
 
   if (last_count_50ms != count_50ms) {
     //actual_millis = millis();
-    //    Serial.print("Miliseconds: ");
-    //    Serial.println (actual_millis - last_millis);
+    //Serial.print("Miliseconds: ");
+    //Serial.println (actual_millis - last_millis);
     //last_millis = actual_millis;
-    last_count_50ms = count_50ms ;
+    //last_count_50ms = count_50ms ;
     TX_ON = true;
   }
 }
@@ -1320,14 +1747,14 @@ void Fill_Testing_TX_Array() {
   A429_TX_Buffer[0]. A429_Label = 001; // Label Octal coded.
   //A429_TX_Buffer[0]. A429_Label = 0000; // Test Label.Does work because isnot received ???.Check why
   A429_TX_Buffer[0]. A429_SDI = B00000010; // SDI Binary.
-  A429_TX_Buffer[0]. A429_Data = 0x27504; // Data HEX coded. Distance to Go 2750,4NM
+  A429_TX_Buffer[0]. A429_Data = 0x01234; // Data HEX coded. Distance to Go 2750,4NM
   A429_TX_Buffer[0]. A429_SSM = B00000011; // SSM Binary.
   A429_TX_Buffer[0]. TX_Refresh_50ms = 2; // 100ms;
 
   //Load TX Buffer with A429 ARRAY [1]
   A429_TX_Buffer[1]. A429_Label = 0377; // Label Octal coded.d
   A429_TX_Buffer[1]. A429_SDI = B00000001; // SDI Binary.
-  A429_TX_Buffer[1]. A429_Data = 0x6789A; // Data HEX coded.
+  A429_TX_Buffer[1]. A429_Data = 0x12345; // Data HEX coded.
   A429_TX_Buffer[1]. A429_SSM = B00000010; // SSM Binary.
   A429_TX_Buffer[1]. TX_Refresh_50ms = 3; //150ms;
 
@@ -1341,28 +1768,28 @@ void Fill_Testing_TX_Array() {
   //Load TX Buffer with A429 ARRAY [3]
   A429_TX_Buffer[3]. A429_Label = 0213; // Label Octal coded.
   A429_TX_Buffer[3]. A429_SDI = B00000001; // SDI Binary.
-  A429_TX_Buffer[3]. A429_Data = 0x13579; // Data HEX coded.
+  A429_TX_Buffer[3]. A429_Data = 0x23579; // Data HEX coded.
   A429_TX_Buffer[3]. A429_SSM = B00000010; // SSM Binary.
   A429_TX_Buffer[3]. TX_Refresh_50ms = 7; //350ms;
 
   //Load TX Buffer with A429 ARRAY [4]
   A429_TX_Buffer[4]. A429_Label = 0103; // Label Octal coded.
   A429_TX_Buffer[4]. A429_SDI = B00000010; // SDI Binary.
-  A429_TX_Buffer[4]. A429_Data = 0x5CE13; // Data HEX coded.
+  A429_TX_Buffer[4]. A429_Data = 0x1CE13; // Data HEX coded.
   A429_TX_Buffer[4]. A429_SSM = B00000001; // SSM Binary.
   A429_TX_Buffer[4]. TX_Refresh_50ms = 11; //550ms;
 
   //Load TX Buffer with A429 ARRAY [5]
   A429_TX_Buffer[5]. A429_Label = 031; // Label Octal coded.
   A429_TX_Buffer[5]. A429_SDI = B00000001; // SDI Binary.
-  A429_TX_Buffer[5]. A429_Data = 0x51234; // Data HEX coded.
+  A429_TX_Buffer[5]. A429_Data = 0x21234; // Data HEX coded.
   A429_TX_Buffer[5]. A429_SSM = B00000010; // SSM Binary.
   A429_TX_Buffer[5]. TX_Refresh_50ms = 13; //650ms;
 
   //Load TX Buffer with A429 ARRAY [6]
   A429_TX_Buffer[6]. A429_Label = 0032; // Label Octal coded.
   A429_TX_Buffer[6]. A429_SDI = B00000010; // SDI Binary.
-  A429_TX_Buffer[6]. A429_Data = 0x3BCDE; // Data HEX coded.
+  A429_TX_Buffer[6]. A429_Data = 0x1BCDE; // Data HEX coded.
   A429_TX_Buffer[6]. A429_SSM = B00000001; // SSM Binary.
   A429_TX_Buffer[6]. TX_Refresh_50ms = 19; //950ms;
 
@@ -1443,7 +1870,7 @@ void Load_DEI_TX_Buffer() { // This function is called every 50msec. Checks refr
 
   Enable_TX(); //ENTX to HIGH.
 
-  Int_DEI_TX_Buffer_Empty_Flag = false;  // To Flag DEI0116 TX_Buffer has been filled out.
+  INT_DEI_TX_Buffer_Empty_Flag = false;  // To Flag DEI0116 TX_Buffer has been filled out.
   TX_Buffer_Busy = false;
 }// Load_DEI_TX_Buffer()
 
@@ -1467,12 +1894,18 @@ void Get_RX1_Data() {
 
   //////////////////////// GET WORD_1  ////////////////
 
+  //SEL WORD1 to be read
   cbi (PORTA, 0); //SEL WORD1 >> PA0 "LOW" /PA0 = LOW >> Set Word_1. Pin: DI22
+
   //Enable_RX_1();//OE1 LOW, DI23
   cbi (PORTA, 1); //PA1 "LO" //  //OE1 PA1 = LOW Enables RX 1. Pin: DI23
   // _delayNanoseconds()Tpwoe); //Delay Tpwoe 200nsec
+
+  //Read WORD_1
   Data_Word_1 = Read_Data_Word();//  Read WORD_1
   //_NOP1();
+
+  //Disable_RX_1();//OE1 HI, DI23
   sbi (PORTA, 1); //OE1 HIGH, DI23//PA1 "HI" //PA1 = HIGH Disenables RX 1.Pin: DI23. OE1
 
   //////////////////////// GET WORD_2  ////////////////
@@ -1494,14 +1927,6 @@ void Get_RX1_Data() {
   DDRL = 0xFF; // PORT Output
   DDRC = 0xFF; // PORT Output
 
-  /**************
-    Int_RX1_Ready = false;   //Reset Interrupt FLAG
-    //Select_Word_2_Read(); //SEL HI WORD_2, DI22
-    sbi (PORTA, 0); //SEL WORD2 >> PA0 "HI" // //PA0 = HIGH >> Set WORD_2.Pin: DI22
-    // To extract information from: DEI1016_Word_1, DEI1016_Word_2, and get the A429 fields: Label, SDI, Data, SSM
-    Int_RX1_Ready = false;
-  *****************/
-
   /////////////////////////////////////////CHECKS//////////////////
 
   // Debugging ISR_RX1_Times
@@ -1511,23 +1936,36 @@ void Get_RX1_Data() {
   //Serial.println(A429_TX_Buffer[0]. A429_Data, HEX);
 
 
+
+  //If Transmition interval > 1500 mseconds, Delete Label from the Buffer
+  /*
+    if(A429_RX_Buffer [i].RX_Refresh_50ms > 30) {
+    RX_Clear_Buffer_Position(i);
+    }
+  */
+
   /////////////////// Checking ALL Buffer for unique Label & Data Pair ///////////////////////////////////////////
 
   //Check if all data Data_Word_1 and Data_Word_2 already in the RX_Buffer. Same Label, same Data. Update refresh Time and >> Return
   for (uint8_t i = 0; i < Max_A429_RX_Buffer; i++) {
+
     if ((Data_Word_1 == A429_RX_Buffer [i].DEI1016_Word_1) && (Data_Word_2 == A429_RX_Buffer [i].DEI1016_Word_2)) {
 
-      //Update refresh Time.Note that calculates blocks of 50msec.Real Refresh time in msec is calculated at Show routine by multiplying by 50
+      //Update refresh Time. Note that calculates blocks of 50msec.Real Refresh time in msec is calculated at Show routine by multiplying by 50
       A429_RX_Buffer [i].RX_Refresh_50ms = ((count_50ms - A429_RX_Buffer [i].Last_RX_count_50ms));// Calculate and Update Refresh Time msec.
       A429_RX_Buffer [i].Last_RX_count_50ms = count_50ms; //Updated Last time to calculate RX Refresh Time.
 
-      Int_RX1_Ready = false;   //Reset Interrupt FLAG
-      //Select_Word_2_Read(); //SEL HI WORD_2, DI22
-      sbi (PORTA, 0); //SEL WORD2 >> PA0 "HI" // //PA0 = HIGH >> Set WORD_2.Pin: DI22
-      //Serial.println("Return: Same Label& Data");
-      return;
-    }//if Same WORD_1 and WORD_2
-  }//For
+      //If Transmition interval > 1500 mseconds, Delete Label from the Buffer
+      if (A429_RX_Buffer [i].RX_Refresh_50ms > 30) {
+        RX_Clear_Buffer_Position(i);
+      }
+    }
+
+    return;
+  }//if Same WORD_1 and WORD_2
+
+  //}//For
+
 
   //Get A429 Label
   Label = Data_Word_1 & 0x00FF;
@@ -1545,10 +1983,10 @@ void Get_RX1_Data() {
       A429_RX_Buffer [i].RX_Refresh_50ms = ((count_50ms - A429_RX_Buffer [i].Last_RX_count_50ms));// Calculate and Update Refresh Time msec.
       A429_RX_Buffer [i].Last_RX_count_50ms = count_50ms; //Updated Last time to calculate RX Refresh Time.
 
-      Int_RX1_Ready = false;   //Reset Interrupt FLAG
-      //Select_Word_2_Read(); //SEL HI WORD_2, DI22
-      sbi (PORTA, 0); //SEL WORD2 >> PA0 "HI" // //PA0 = HIGH >> Set WORD_2.Pin: DI22
-      //Serial.println("Return: Same Label Update Data");
+      //If Transmition interval > 1500 mseconds, Delete Label from the Buffer
+      if (A429_RX_Buffer [i].RX_Refresh_50ms > 30) {
+        RX_Clear_Buffer_Position(i);
+      }
       return;
     }
   }//For
@@ -1571,6 +2009,11 @@ void Get_RX1_Data() {
   A429_RX_Buffer [A429_RX_Buffer_Write_Index].RX_Refresh_50ms = ((count_50ms - A429_RX_Buffer [A429_RX_Buffer_Write_Index].Last_RX_count_50ms));// Calculate and Update Refresh Time msec.
   A429_RX_Buffer [A429_RX_Buffer_Write_Index].Last_RX_count_50ms = count_50ms; //Updated Last time to calculate RX Refresh Time.
 
+  //If Transmition interval > 1500 mseconds, Delete Label from the Buffer
+  if (A429_RX_Buffer [A429_RX_Buffer_Write_Index].RX_Refresh_50ms > 30) {
+    RX_Clear_Buffer_Position(A429_RX_Buffer_Write_Index);
+  }
+
   //Increase RX_Buffer Pointer
   A429_RX_Buffer_Write_Index++;//Increase Pointer
 
@@ -1578,11 +2021,6 @@ void Get_RX1_Data() {
   if (A429_RX_Buffer_Write_Index >= Max_A429_RX_Buffer) {
     A429_RX_Buffer_Write_Index = 0; // Reset Write Pointer
   }
-
-  //Serial.println("Return: Updated Buffer"); //Debugging
-  Int_RX1_Ready = false;   //Reset Interrupt FLAG
-  //Select_Word_2_Read(); //SEL HI WORD_2, DI22
-  sbi (PORTA, 0); //SEL WORD2 >> PA0 "HI" // //PA0 = HIGH >> Set WORD_2.Pin: DI22
 
 } //Get_RX1_Data()
 
@@ -1644,13 +2082,27 @@ void Arrange_RX_Buffer() {
   } //End Buffer Limit
   // } //while((A429_RX_Buffer_Arrange_Index != A429_RX_Buffer_Write_Index))
 
-  Serial.print("\nA429_RX_Buffer_Arrange_Index: ");
-  Serial.println(A429_RX_Buffer_Arrange_Index);
-  Serial.print("A429_RX_Buffer_Write_Index: ");
-  Serial.println(A429_RX_Buffer_Write_Index);
-
+  /*DEBUGGING
+    Serial.print("\nA429_RX_Buffer_Arrange_Index: ");
+    Serial.println(A429_RX_Buffer_Arrange_Index);
+    Serial.print("A429_RX_Buffer_Write_Index: ");
+    Serial.println(A429_RX_Buffer_Write_Index);
+  */
 }//Arrange Buffer
 
+void RX_Clear_Buffer_Position (uint8_t Buff_Index) {
+
+  A429_RX_Buffer[Buff_Index].A429_Label = 0;
+  A429_RX_Buffer[Buff_Index].A429_SDI = 0;
+  A429_RX_Buffer[Buff_Index].A429_Data = 0;
+  A429_RX_Buffer[Buff_Index].A429_SSM = 0;
+  A429_RX_Buffer[Buff_Index].A429_Parity = 0;
+  A429_RX_Buffer[Buff_Index].A429_Word = 0;
+  A429_RX_Buffer[Buff_Index].DEI1016_Word_1 = 0;
+  A429_RX_Buffer[Buff_Index].DEI1016_Word_2 = 0;
+  A429_RX_Buffer[Buff_Index].TX_Refresh_50ms = 0;
+  A429_RX_Buffer[Buff_Index].Last_TX_Refresh_50ms = 0;
+}//void RX_Clear_Buffer_Position (uint8_t Buff_Index)
 
 void RX_Clear_Buffer() {
   for ( uint8_t i = 0; i < Max_A429_RX_Buffer; i++) {
@@ -1793,7 +2245,7 @@ void Home_Menu() {
 
     case '8':
       Help();
-      delay(2000);
+      //delay(2000);
       break;
 
     default:
@@ -1929,28 +2381,17 @@ void TX_SPEED_PARITY() {
   else
     Control_Word = (Control_Word & 0xEFFF); // ODD  Bit 12 = '0'
 
-  // Why?????
-  while (Int_DEI_TX_Buffer_Empty_Flag != true) {
-    ;//Wait for No ISR Int_DEI_TX_Buffer_Empty_Flag
-    //Serial.println("Wating for TX Buffer Empty!!");; // Wait for TX Buffer Empty
+  /*******************/
+  while (INT_DEI_TX_Buffer_Empty_Flag != true) {
+    ;//Wait until TX Buffer is empty to set the new Control Word.
+    //Serial.println("Set Speed & Parity.Wating for TX Buffer Empty!!");; // Wait for TX Buffer Empty
   }
+  /***********************/
 
   Load_Control_Word (Control_Word);
 
   RX_Clear_Buffer(); // Start from scratch, because RX Speed has changed.
 
-  /*
-    if (TX_Speed)
-    //Serial.println("TX_HI");
-
-    else
-    //Serial.println("TX_LO");
-
-    if (TX_Parity)
-    //Serial.println("EVEN");
-    else
-    //Serial.println("ODD");
-  */
   if (key == '4') {
     State = State_TX_Menu; //Go to TX_Menu
     TX_Menu();
@@ -2207,34 +2648,18 @@ void Draw_TX_Programming_Menu() {
 uint8_t Programming_Label() {
   uint8_t A429_Label = 0;
   //Serial.println("Menu Programm Label");
-  while ( A429_Label == 0 ) {
+  /*
+    while ( A429_Label == -1 ) {
     Draw_Get_A429_Label_Screen();
     A429_Label = Get_A429_Label();
-    //Serial.print("Get Label: ");
-    //Serial.print(A429_Label);
-    //Serial.print(" ");
-    //Serial.println(A429_Label, OCT);
-  }
+    }
+  */
+  Draw_Get_A429_Label_Screen();
+  A429_Label = Get_A429_Label();
+
   State = State_Programming_TX; //Back to Programming TX
   return A429_Label;
 } // Programming_Label()
-
-/*
-  uint8_t Programming_Label_Old() {
-  uint8_t A429_Label = -1;
-  //Serial.println("Menu Programm Label");
-  while ( A429_Label == -1 ) {
-    Draw_Get_A429_Label_Screen();
-    A429_Label = Get_A429_Label();
-    //Serial.print("Get Label: ");
-    //Serial.print(A429_Label);
-    //Serial.print(" ");
-    //Serial.println(A429_Label, OCT);
-  }
-  State = State_Programming_TX; //Back to Programming TX
-  return A429_Label;
-  } // Programming_Label_old()
-*/
 
 int8_t  Programming_SDI() {
   int8_t SDI = -1; // Set SDI error to force while loop to Get_SDI()
@@ -2268,7 +2693,7 @@ int8_t Programming_SSM() {
     Draw_Get_SSM_Screen();
     SSM = Get_SSM();
   }
-  State = State_Programming_TX; //Back to Programming TX
+  ; //Back to Programming TX
   return SSM;
 } // Programming_SSM()
 
@@ -2298,51 +2723,18 @@ void TX_Programming_Menu() {
 
   Draw_TX_Programming_Menu();
   State = State_Programming_TX;
-  //Serial.println(" ");
-  //Serial.println("Start.");
+
   do {
     while (!(key = I2C_Keypad.getKey())) { }
     switch (key) {
       case '1':
-        //Serial.println("Label");
         A429_Label = Programming_Label();
         // Store A429_Label
-        //Serial.println("Label OK");
         A429_TX_Buffer[TX_Buffer_Index].A429_Label = A429_Label;
         Draw_TX_Programming_Menu(); // Redraw TX Programming Menu
         break;
-      /*Serial.println("Label");
-        //Serial.println("Step one.");
-        int count = 0;
-        //Serial.print("Count: ");
-        //Serial.println(count);
-        A429_Label = Get_A429_Label();
-        //Serial.print("Get Label: ");
-        //Serial.print(A429_Label);
-        //Serial.print(" ");
-        //Serial.println(A429_Label, OCT);
-        if (A429_Label == -1){
-        //Serial.println("Start label loop.");}
-        while (A429_Label == -1){
-        Show_Label_Error();
-        count++;
-        //Serial.println(" ");
-        //Serial.print("Count: ");
-        //Serial.println(count);
-        A429_Label = Get_A429_Label();
-        //Serial.print("Label: ");
-        //Serial.print(A429_Label);
-        //Serial.print(" ");
-        //Serial.println(A429_Label, OCT);
-        }
-        //Serial.println("Finish.");
-        //Serial.println("Label OK");
-        A429_TX_Buffer[TX_Buffer_Index].A429_Label = A429_Label;
-        Draw_TX_Programming_Menu();
-        break;*/
 
       case '2':
-        //Serial.println("SDI");
         A429_SDI = Programming_SDI();
         // Store SDI
         A429_TX_Buffer[TX_Buffer_Index].A429_SDI = A429_SDI;
@@ -2350,7 +2742,6 @@ void TX_Programming_Menu() {
         break;
 
       case '3':
-        //Serial.println("Data");
         A429_Data = Programming_Data();
         // Store A429_Data
         A429_TX_Buffer[TX_Buffer_Index].A429_Data = A429_Data;
@@ -2358,7 +2749,6 @@ void TX_Programming_Menu() {
         break;
 
       case '4':
-        //Serial.println("SSM");
         A429_SSM = Programming_SSM();
         // Store SSM
         A429_TX_Buffer[TX_Buffer_Index].A429_SSM = A429_SSM;
@@ -2367,12 +2757,9 @@ void TX_Programming_Menu() {
 
       //////////// Refresh Time /////////////
       case '5':
-        //Serial.println("Refresh Time");
         A429_Time = Programming_A429_Refresh();
         // Store TX_Refresh_50ms
         A429_TX_Buffer[TX_Buffer_Index].TX_Refresh_50ms = A429_Time;
-        //Serial.print("Refresh Time Stored:");
-        //Serial.println( A429_TX_Buffer[TX_Buffer_Index].TX_Refresh_50ms);
         Draw_TX_Programming_Menu(); // Redraw TX Programming Menu
         break;
       //////////////////////////////////
@@ -2576,13 +2963,6 @@ void RX_SPEED_PARITY() {
 
   RX_Clear_Buffer(); // start from scratch, because RX Speed has changed
 
-  /*
-    if (RX_Speed)
-    //Serial.println("RX_HI");
-    else
-    //Serial.println("RX_LO");
-  */
-
   if (key == '4') {
     State  = State_RX_Display; //Go to RX_Menu
     RX_Display();
@@ -2639,7 +3019,7 @@ void RX_Display_ENG_Old() {
 
   delay(4000);
   State = State_RX_Display;
-} // RX_Display_ENG()
+} // RX_Display_ENG_Old()
 
 
 void RX_Display() {
@@ -2691,30 +3071,55 @@ void RX_Display() {
 /////////////////////// TEST ///////////////////////////////
 void Draw_Test() {
   lcd.clear();
-  lcd.setCursor(7, 1);
+  lcd.setCursor(7, 0);
   if (Menu_Test == true) {
     Menu_Test = false; // to activate scrooling TX_Buffer[0].Data every ISR_INT = 10
     lcd.print("TEST OFF");
-    //PORTB &= ~(1 << PB4);
+    delay(3000);
+    lcd.setCursor(0, 1);
+    lcd.print("Allowed Hardware");
+    lcd.setCursor(0, 2);
+    lcd.print("IN's & OUT's");
+    lcd.setCursor(0, 3);
+    lcd.print("Connections");
+    delay(5000);
+    PORTB &= ~(1 << PB4); // LED BAT/TEST OFF
   }
   else {
     Menu_Test = true; // to activate scrooling TX_Buffer[0].Data every ISR_INT = 10
     lcd.print("TEST ON");
-    //PORTB |= 1 << PB4;
+    delay(3000);
+    lcd.setCursor(0, 1);
+    lcd.print("Disconnect hardware");
+    lcd.setCursor(0, 2);
+    lcd.print("IN's and OUT's Ports");
+    lcd.setCursor(0, 3);
+    lcd.print("Connections");
+    delay(5000);
+    lcd.clear();
+    lcd.home();
+    lcd.setCursor(7, 0);
+    lcd.print("TEST ON");
+    lcd.setCursor(0, 2);
+    lcd.print("Press any key when");
+    lcd.setCursor(0, 3);
+    lcd.print("HARDWARE OFF!!");
+    while (!(key = I2C_Keypad.getKey())) {
+    }
+    PORTB |= 1 << PB4; // LED BAT/TEST ON
   }
 } // Draw_Test()
 
 void Test() {
   Draw_Test();
-  delay(1000);
+  //delay(5000);
   //Serial.println("Menu Programm TEST");
   Control_Word = 0x0000; // Reset Control_Word;
 
   if (Menu_Test == true) {
-    // Why?????
-    while (Int_DEI_TX_Buffer_Empty_Flag != true) {
-      ;//Wait for No ISR Int_DEI_TX_Buffer_Empty_Flag
-      //Serial.println("Wating for TX Buffer Empty!!");; // Wait for TX Buffer Empty
+    while (INT_DEI_TX_Buffer_Empty_Flag != true) {
+      ;//Wait until TX Buffer is empty to set the new Control Word.
+      //Serial.println("Test ON. Wating for TX Buffer Empty!!");; // Wait for TX Buffer Empty
     }
     Control_Word = (PAREN | SLFTST | PAR_ODD | TX_LO | RX_LO | WORD_32); // Enables Wrap Around Selftest "SLFTST"
     Load_Control_Word(Control_Word);  //Load Control Word
@@ -2722,10 +3127,9 @@ void Test() {
     RX_Clear_Buffer();
   }
   else {
-    // Why?????
-    while (Int_DEI_TX_Buffer_Empty_Flag != true) {
-      ;//Wait for No ISR Int_DEI_TX_Buffer_Empty_Flag
-      //Serial.println("Wating for TX Buffer Empty!!");; // Wait for TX Buffer Empty
+    while (INT_DEI_TX_Buffer_Empty_Flag != true) {
+      ;//Wait until TX Buffer is empty to set the new Control Word.
+      //Serial.println("TestOFF. Wating for TX Buffer Empty!!");; // Wait for TX Buffer Empty
     }
     Control_Word = (PAREN | NOT_SLFTST | PAR_ODD | TX_LO | RX_LO | WORD_32); // Disenables Wrap Around Selftest "SLFTST"
     Load_Control_Word(Control_Word);  //Load Control Word
@@ -2745,10 +3149,10 @@ void Test() {
 /////////////////////// MISC ///////////////////////////////
 void Draw_Software_Reset() {
   lcd.clear();
-  lcd.setCursor(0, 1);
-  lcd.print("SW_Reset");
-  lcd.setCursor(0, 2);
-  lcd.print("Reset DEI1016!!!");
+  lcd.setCursor(3, 0);
+  lcd.print("Software Reset");
+  lcd.setCursor(1, 2);
+  lcd.print("Reset IC DEI1016");
 } // Draw_Software_Reset()
 
 void Software_Reset() {
@@ -2760,170 +3164,87 @@ void Software_Reset() {
 } // Software_Reset()
 
 /////////////////////// HELP ///////////////////////////////
+void Draw_Help_First_Page() {
+
+  lcd.clear();
+
+  //Draw the first help page
+  for (uint8_t i = 0; i <= 3; i++) {
+    lcd.setCursor(0, i);
+    lcd.print(Help_Strings[i]);
+  }
+  Help_Index = 0; // Upadte Help_Index
+  //Serial.print("Help_Index First Page:");
+  //Serial.println(Help_Index);
+
+} // Draw_Help_First_Page()
+
 void Draw_Help() {
   lcd.clear();
-  lcd.setCursor(0, 1);
-  lcd.print("HELP");
+  for (uint8_t i = 0; i <= 3; i++) {
+    lcd.setCursor(0, i);// (colunm,file)
+    lcd.print(Help_Strings[Help_Index + i]);
+  }
+
+  //Serial.print("Help_Index Draw_Help:");
+  //Serial.println(Help_Index);
 } // Draw_Help()
 
+
+
 void Help() {
-  //Serial.println("Help: ");
-  Draw_Help();
+
+  //uint8_t Help_Index = 3;
+  uint8_t Help_key = 0;
+
+  Draw_Help_First_Page();
+
+  do {
+    while (!(Help_key = I2C_Keypad.getKey())) {
+      ; //Do Nothing
+    }
+
+    switch (Help_key) { //Check for Digital Input
+      case '1':
+        Help_Index += 4; // Upadte Help_Index
+        if (Help_Index >= Help_Index_Max)
+          Help_Index = 0; // Reset Help_Index
+
+        ////////////////   Debugging ////////////////////
+        //Serial.print("Case '7' Help Index:");
+        //Serial.println(Help_Index);
+        /////////////////////////////////////////////////
+
+        Draw_Help();
+        break;
+
+      case '7':
+        if (Help_Index == 0)
+          Help_Index = Help_Index_Max - 3;
+        else Help_Index -= 4;
+
+        ////////////////   Debugging ////////////////////
+        //Serial.print("Case '7' Help Index:");
+        //Serial.println(Help_Index);
+        ///////////////////////////////////////////////
+
+        Draw_Help();
+        break;
+
+      case '*':
+        break;
+
+      default:
+        lcd.clear();
+        lcd.setCursor(0, 1);
+        lcd.print(" INVALID ENTRY !!!!");
+        delay(2000);
+        Draw_Help_First_Page();
+    }//Switch
+  }  while (Help_key != '*'); //Do until exit from TX_Menu to go back to Home_Menu
+
+  State = State_Home; //Back to Home_Menu
 } // Help()
 
 
 #endif
-
-
-/////////////////// OLD CODE /////////////////////////////
-/* UNSUSED
-  void Draw_TX_Display_Hex() {
-  lcd.clear();
-  lcd.setCursor(0, 0);// For RX shown  UP/DWN
-  lcd.setCursor(3, 0);
-  lcd.printstr("LAB SDI DATA  SSM ");
-  lcd.setCursor(0, 3);
-  lcd.write('1');
-  lcd.setCursor(1, 3);
-  lcd.write(CharUP);
-  lcd.setCursor(3, 3);
-  lcd.write('7');
-  lcd.setCursor(4, 3);
-  lcd.write(CharDOWN);
-  lcd.setCursor(6, 3);
-  lcd.write('*');
-  lcd.setCursor(7, 3);
-  lcd.printstr("Home");
-  }//Draw_TX_Display_Hex()
-
-  void Draw_TX_Menu_Old() {
-  lcd.clear();
-  lcd.setCursor(0, 0); // For Header
-  lcd.print(" ----- TX Menu ------");
-  lcd.setCursor(0, 1);
-  lcd.printstr("TX LAB SDI DATA  SSM ");
-  //  lcd.setCursor(0, 2); // For TX shown UP/DWN
-  //  lcd.print(TX_Buffer_Index);
-  lcd.setCursor(0, 2); // For TX shown UP/DWN
-  lcd.print(TX_Buffer_Index + 1); // So as not to start with "0"
-  lcd.setCursor(0, 3);
-  lcd.write('1');
-  lcd.setCursor(1, 3);
-  lcd.write(CharUP);
-  lcd.setCursor(3, 3);
-  lcd.write('7');
-  lcd.setCursor(4, 3);
-  lcd.write(CharDOWN);
-  lcd.setCursor(6, 3);
-  lcd.print("4>Prog");
-  lcd.setCursor(13, 3);
-  lcd.print("*>Home");
-  }//Draw_TX_Menu_Old
-
-  void Draw_RX_Display_Hex() {
-  lcd.clear();
-  lcd.setCursor(0, 0);// For RX shown  UP/DWN
-  lcd.setCursor(3, 0);
-  lcd.printstr("LAB SDI DATA  SSM ");
-  lcd.setCursor(0, 3);
-  lcd.write('1');
-  lcd.setCursor(1, 3);
-  lcd.write(CharUP);
-
-  lcd.setCursor(3, 3);
-  lcd.write('7');
-  lcd.setCursor(4, 3);
-  lcd.write(CharDOWN);
-
-  lcd.setCursor(6, 3);
-  lcd.write('*');
-  lcd.setCursor(7, 3);
-  lcd.printstr("Home");
-
-  }//Draw_RX_Display_Hex()
-
-  /////////////////// PROGRAM PARITY /////////////////////////
-  void Home_Menu() {
-  switch (key) {
-    case '1':
-      TX_SPEED_PARITY();
-      TX_Menu();
-      //State = State_Home;
-      break;
-    case '7':
-      RX_SPEED_PARITY();
-      RX_Display();
-      break;
-    case '2':
-      //Serial.println("Test: ");
-      lcd.clear();
-      lcd.setCursor(0, 1);
-      lcd.print(" TEST");
-      Test();
-      delay(2000);
-      break;
-
-    case '5':
-      //Serial.println("Misc.: ");
-      lcd.clear();
-      lcd.setCursor(0, 1);
-      lcd.print(" MISC.");
-      lcd.setCursor(0, 2);
-      lcd.print("Reset is comming!!!!");
-      Misc();
-      delay(2000);
-      Do_Reset();
-      break;
-
-    case '8':
-      Help();
-      //Serial.println("Help: ");
-      lcd.clear();
-      lcd.setCursor(0, 1);
-      lcd.print(" HELP");
-      delay(2000);
-      break;
-  }
-  }//Home_Menu()
-
-  void  Draw_Program_Parity() {
-  lcd.clear();
-  lcd.setCursor(1, 0);
-  lcd.printstr("Program PARITY");
-  }
-  void Program_Parity() {
-  State = State_Programming_Parity;
-  Draw_Program_Parity();
-  //Serial.println("Menu Programm PARITY");
-  delay(2000);
-  ;;;;
-  ;;;;
-  State = State_Programming_TX; //Back to Programming TX
-  }
-
-  void  Draw_Programming_Label() {
-  lcd.clear();
-  lcd.setCursor(1, 0);
-  lcd.printstr("Program Label");
-  }
-  void Programming_Label(){
-  State = State_Programming_Label;
-  Draw_Programming_Label();
-  //Serial.println("Menu Programm Label");
-  delay(2000);
-  ;;;;
-  ;;;;
-  }
-
-  void TX_Programming_Menu(){
-  switch (key){
-    case '1':
-      A429_Label = Get_A429_Label();
-      while (A429_Label == -1) {
-        Show_Label_Error();
-        A429_Label = Get_A429_Label();
-      }
-      //Serial.println("Label OK");
-  }
-  }
-*/

@@ -15,7 +15,8 @@
 #define RX_HI      0x0000   // RX (receive)  HIgh speed. CONTROL WORD_2
 #define WORD_32    0x0000   // 32 bits
 #define WORD_25    0x8000   //25 bits
-#define Max_A429_RX_Buffer 12    // Maximun Buffer RX. Should not be  > 64 because using "uint8_t" to scroll RX Buffer
+//#define Max_A429_RX_Buffer 12    // Maximun Buffer RX. Should not be  > 64 because using "uint8_t" to scroll RX Buffer
+#define Max_A429_RX_Buffer 15   //Multiple of 3 to have 3 for page. Maximun Buffer RX. Should not be  > 64 because using "uint8_t" to scroll RX Buffer
 #define Max_A429_TX_Buffer 8    // Maximun Buffer TX in DEI1016.  
  
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -73,14 +74,6 @@
 #define DATA_14 31 // PORT_C6. IN/OUT Data Word Bit 14. For data interchange between MEGA 2560 & DEI 1016.
 #define DATA_15 30 // PORT_C7. IN/OUT Data Word Bit 15. For data interchange between MEGA 2560 & DEI 1016.
 
-
-//////////////////////////////////////////MEGA 2560 INPUTS ////////////////////////////////////////////////////
-
-//#define TX_SCROLL  5  // INPUT (PULL-UP). To check for TX Display scrolling.
-//#define RX_SCROLL  4  // INPUT (PULL-UP). To check for RX Display scrolling.
-
-//#define Mask_Scroll_TX  0x00100000 // PG5
-//#define Mask_Scroll_RX  0x00001000 // PE3
 
 #define BounceDelay 1000
 
